@@ -26,18 +26,18 @@ app.get("/:roomid",(req,res)=>{
     function createClient(socket){
         let roomId = socket.handshake.query.room;
         if (activeUsers[roomId]){
-            activeUsers[roomId][socket.id] = {name:socket.id}
+            activeUsers[roomId][socket.id] = {name:socket.id,value:socket.id}
         } else {
             activeUsers[roomId] = {};
-            activeUsers[roomId][socket.id] = {name:socket.id}
+            activeUsers[roomId][socket.id] = {name:socket.id,value:socket.id}
             console.log(roomId);
         };
         if (!activeChats[roomId]){
             activeChats[roomId] = [];
         }
         socket.join(roomId);
-        chat.to(socket.id).emit('welcome',{members:activeUsers[roomId],chats:activeChats[roomId]});
-        socket.to(roomId).emit('join',{timestamp:Date.now(),value:socket.id});
+        chat.to(socket.id).emit('welcome',{users:activeUsers[roomId],chats:activeChats[roomId]});
+        socket.to(roomId).emit('join',{timestamp:Date.now(),value:socket.id, name:socket.id});
         socket.on('chat message',(msg)=>{
             if(!!msg.value){
                 msg.timestamp = Date.now();
