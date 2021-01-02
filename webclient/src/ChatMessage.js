@@ -14,12 +14,21 @@ const useStyles = makeStyles({
   userSignature:{
     textAlign: "left",
     fontSize: '0.6em'
+  },
+  ownMessage:{
+    backgroundColor: "#90ee90",
+    marginTop: 2
+  },
+  othersMessage:{
+
   }
 })
 
-export default function ChatMessage({ name, message, timestamp }) {
+
+
+export default function ChatMessage({ name, message, timestamp, isOwn }) {
   const classes = useStyles();
-  return (<ListItem alignItems="flex-start">
+  return (<ListItem className={(isOwn ? classes.ownMessage : classes.othersMessage)}alignItems="flex-start"> 
     <ListItemText primary = {message}
       secondary = {
           <React.Fragment>

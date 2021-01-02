@@ -43,21 +43,22 @@ app.get("/api",(req,res)=>{
     function createClient(socket){
         let roomId = socket.handshake.query.room;
         socket.on('hello',(msg)=>{
+            socket.nickname = msg.name;
             if (activeUsers[roomId]){
-                activeUsers[roomId][msg.name] = {name:msg.name,value:socket.id}
+                activeUsers[roomId][socket.nickname] = {name:socket.nickname,value:socket.id}
             } else {
                 activeUsers[roomId] = {};
-                activeUsers[roomId][msg.name] = {name:msg.name,value:socket.id}
+                activeUsers[roomId][socket.nickname] = {name:socket.nickname,value:socket.id}
             };
             if (!activeChats[roomId]){
                 activeChats[roomId] = [];
             }
-        })
-       
 
-        socket.join(roomId);
-        chat.to(socket.id).emit('welcome',{users:activeUsers[roomId],chats:activeChats[roomId]});
-        socket.to(roomId).emit('join',{timestamp:Date.now(),value:socket.id, name:socket.id});
+            socket.join(roomId);
+            chat.to(socket.id).emit('welcome',{users:activeUsers[roomId],chats:activeChats[roomId]});
+            socket.to(roomId).emit('join',{timestamp:Date.now(),value:socket.nickname, name:socket.nickname});
+        })
+    
         socket.on('chat message',(msg)=>{
             if(!!msg.value){
                 msg.timestamp = Date.now();
@@ -66,8 +67,8 @@ app.get("/api",(req,res)=>{
             }
         });
         socket.on("disconnect",()=>{
-            socket.to(roomId).broadcast.emit('leave',{timestamp:Date.now(),value:socket.id});
-            delete activeUsers[roomId][socket.id];
+            socket.to(roomId).broadcast.emit('leave',{timestamp:Date.now(),value:socket.nickname});
+            delete activeUsers[roomId][socket.nickname];
         })
     };
     const signalling = io.of(signallingSettings.path);

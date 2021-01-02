@@ -3,9 +3,6 @@ import UserEntry from "./UserEntry";
 
 export default ({ users }) =>
 <List>
-    <Toolbar>
-        Users
-    </Toolbar>
 { (Object.keys(users).map((user) =>
   <UserEntry
     key={ users[user].value }

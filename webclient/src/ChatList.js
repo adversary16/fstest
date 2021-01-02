@@ -1,6 +1,4 @@
-import { FixedSizeList } from 'react-window';
 import moment from 'moment';
-import PropTypes from 'prop-types';
 import React from 'react';
 
 
@@ -14,18 +12,29 @@ const useStyles = makeStyles({
         display: "flex",
         flexDirection: "column-reverse",
         height: "100%",
-        minWidth: 720,
+        width:"80%",
+        minWidth: 480,
         maxWidth: 960,
-        minHeight: 640,
+        minHeight: 480,
         maxHeight: 720,
         overflowY: "scroll"
     },
     header: {
         backgroundColor:"teal"
+    },
+    ownMessage: {
+        backgroundColor: "green",
+    },
+    message: {
+        backgroundColor: "gray"
     }
 })
 
-export default function ChatList({messages}){
+function IsOwn (sendername, ownname){
+return (sendername==ownname)
+}
+
+export default function ChatList({messages, name}){
 const classes = useStyles();
 return (
     <Container>
@@ -33,6 +42,7 @@ return (
     {/* <Toolbar>Messages</Toolbar> */}
     {messages.map((message, index) =>
     <ChatMessage
+        isOwn = {IsOwn(name,message.name)}
         key={index}
         message={message.value}
         name={message.name}
