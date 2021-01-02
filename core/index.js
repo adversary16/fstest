@@ -6,18 +6,35 @@ const http = require('http').createServer(app);
 const SocketIo = require ("socket.io");
 
 const { httpSettings, chatSettings, signallingSettings } = require('./config/vars');
+const ApiRouter = require('./routes/api');
 const io = SocketIo(http, {transports: ['websocket']})
 
 const activeUsers = {};
 const activeChats = {};
+const apiRouter = new ApiRouter;
 
 app.use ('/js',express.static(__dirname+"/webclient/js"));
-app.get("/:roomid",(req,res)=>{
-    if (req.params.roomid){res.sendFile(__dirname+"/webclient/index.html");
-    xx = req.params.roomid;
-} else
-    {res.sendStatus(401)};
+app.get("/api",(req,res)=>{
+    if (req.query.action){
+        apiRouter[req.query.action]();
+        console.log(!!activeUsers[req.query.room])
+        // let response=validateUser(req
+        res.status(200).send({token:JSON.stringify(req.query)});
+    }
 })
+
+
+
+// router = {
+//     validateUser = (query) => {
+//         console.log(!!activeUsers[query.room].hasValue(query.user))
+//     },
+//     logon = (query) => {
+//         console.log("logon requested")
+//     }
+    
+// }
+
 
     const chat = io.of( chatSettings.path );
     chat.on('connection', createClient);
@@ -25,16 +42,19 @@ app.get("/:roomid",(req,res)=>{
 
     function createClient(socket){
         let roomId = socket.handshake.query.room;
-        if (activeUsers[roomId]){
-            activeUsers[roomId][socket.id] = {name:socket.id,value:socket.id}
-        } else {
-            activeUsers[roomId] = {};
-            activeUsers[roomId][socket.id] = {name:socket.id,value:socket.id}
-            console.log(roomId);
-        };
-        if (!activeChats[roomId]){
-            activeChats[roomId] = [];
-        }
+        socket.on('hello',(msg)=>{
+            if (activeUsers[roomId]){
+                activeUsers[roomId][msg.name] = {name:msg.name,value:socket.id}
+            } else {
+                activeUsers[roomId] = {};
+                activeUsers[roomId][msg.name] = {name:msg.name,value:socket.id}
+            };
+            if (!activeChats[roomId]){
+                activeChats[roomId] = [];
+            }
+        })
+       
+
         socket.join(roomId);
         chat.to(socket.id).emit('welcome',{users:activeUsers[roomId],chats:activeChats[roomId]});
         socket.to(roomId).emit('join',{timestamp:Date.now(),value:socket.id, name:socket.id});
@@ -42,7 +62,6 @@ app.get("/:roomid",(req,res)=>{
             if(!!msg.value){
                 msg.timestamp = Date.now();
                 activeChats[roomId].push(msg);
-                console.log(activeChats);
                 chat.to(roomId).emit('chat message',msg)
             }
         });
@@ -53,7 +72,6 @@ app.get("/:roomid",(req,res)=>{
     };
     const signalling = io.of(signallingSettings.path);
     signalling.on('connection',(e)=>{
-        console.log("webRTC connected");
         e.on('rtc',(msg)=>{
             e.broadcast.emit('rtc',msg);
         })

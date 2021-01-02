@@ -16,6 +16,7 @@ const useStyles = makeStyles({
         height: "100%",
         minWidth: 720,
         maxWidth: 960,
+        minHeight: 640,
         maxHeight: 720,
         overflowY: "scroll"
     },
@@ -28,7 +29,6 @@ export default function ChatList({messages}){
 const classes = useStyles();
 return (
     <Container>
-    <Toolbar className={classes.header}>Messages</Toolbar>
     <List className = {classes.root}>
     {/* <Toolbar>Messages</Toolbar> */}
     {messages.map((message, index) =>

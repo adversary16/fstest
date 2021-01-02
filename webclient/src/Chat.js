@@ -9,25 +9,32 @@ import ListItemText from '@material-ui/core/ListItemText';
 import ListSubheader from '@material-ui/core/ListSubheader';
 import ChatList from './ChatList';
 import UserList from './UserList';
-import { Grid, Paper } from '@material-ui/core';
-import Logon from './Logon';
+import { Grid, Paper, Toolbar } from '@material-ui/core';
+import { Cookies } from 'react-cookie';
 
+
+
+
+const cookies = new Cookies();
+const parsedCookie = cookies.get('token');
 
 const chatURL = ':3081/chat';
 const signallingURL = ':3081/signalling';
 
 class Chat extends Component {
-  state = {
-    name: 'Bob',
+    // parsedCookie = JSON.parse(cookies.get('token'));
+    state = {
+    name: parsedCookie.user,
+    token: parsedCookie.token,
     messages: [],
-    users: {}
+    users: {},
+    chatId: this.props.chatId
   }
-
-  chatSocket = openSocket(chatURL,{transports:['websocket'],query:{"room":"asdasd","name":this.state.name},forceNew:true});
-  signallingSocket = openSocket(signallingURL,{transports:['websocket'],query:{"room":"asdasd","name":this.state.name},forceNew:true});
+  chatSocket = openSocket(chatURL,{transports:['websocket'],query:{"room":this.props.chatId,"name":this.state.name},forceNew:true});
+  signallingSocket = openSocket(signallingURL,{transports:['websocket'],query:{"room":this.props.chatId,"name":this.state.name},forceNew:true});
   componentDidMount() {
-    this.chatSocket.on('open',() => {
-      console.log('connected')
+    this.chatSocket.on('connect',() => {
+      this.chatSocket.emit('hello',{user: this.state.name, token: this.state.token})
     });
 
     this.chatSocket.on('chat message',(evt) => {
@@ -46,7 +53,6 @@ class Chat extends Component {
 
     this.chatSocket.on('welcome',(evt)=>{
         for (let user in evt.users){
-            // console.log(evt.users[user]);
             this.addUser(evt.users[user])
         };
         // evt.users.map((user)=>{this.updateUsers(user)});
@@ -78,7 +84,7 @@ class Chat extends Component {
   submitMessage = messageString => {
     // on submitting the ChatInput form, send the message, add it to the list and reset the input
     // let timestamp = new Date();
-    const message = { name: this.state.name, sender: this.chatSocket.id, value: messageString};
+    const message = { name: parsedCookie.user, sender: this.chatSocket.id, value: messageString};
     this.chatSocket.emit("chat message",message);
     // this.addMessage(message)
   }
@@ -86,13 +92,13 @@ class Chat extends Component {
   render() {
     return (
     <Grid container className="main" justify="center" padding={20}>
-        <Logon></Logon>
         <Paper padding="20">
       <UserList 
             users = { this.state.users }
       />
       </Paper>
       <Paper>
+      <Toolbar>Messages</Toolbar>
         <ChatList
             messages = { this.state.messages }
         />
@@ -100,16 +106,6 @@ class Chat extends Component {
           ws={this.ws}
           onSubmitMessage={messageString => this.submitMessage(messageString)}
         />
-        <label htmlFor="name">
-          Name:&nbsp;
-          <input
-            type="text"
-            id={'name'}
-            placeholder={'Enter your name...'}
-            value={this.state.name}
-            onChange={(e) => {this.setState({ name: e.target.value })}}
-          />
-        </label>
         </Paper>
         </Grid>
     )
