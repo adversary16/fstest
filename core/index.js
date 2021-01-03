@@ -4,6 +4,7 @@ const express = require ('express');
 const app = express();
 const http = require('http').createServer(app);
 const SocketIo = require ("socket.io");
+const uuidv4  = require('./utils/generateUserToken');
 
 const { httpSettings, chatSettings, signallingSettings } = require('./config/vars');
 const ApiRouter = require('./routes/api');
@@ -19,6 +20,7 @@ app.get("/api",(req,res)=>{
         apiRouter[req.query.action]();
         console.log(!!activeUsers[req.query.room])
         // let response=validateUser(req
+        req.query.token = uuidv4();
         res.status(200).send({token:JSON.stringify(req.query)});
     }
 })
@@ -72,11 +74,16 @@ app.get("/api",(req,res)=>{
         })
     };
     const signalling = io.of(signallingSettings.path);
-    signalling.on('connection',(e)=>{
-        e.on('rtc',(msg)=>{
-            e.broadcast.emit('rtc',msg);
+    signalling.on('connection',(socket)=>{
+        socket.on('offer',(msg)=>{
+            socket.broadcast.emit('offer',msg);
+        });
+        socket.on('answer',(msg)=>{
+            socket.broadcast.emit('answer',msg);
         })
     })
+
+
 
 
 

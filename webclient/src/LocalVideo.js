@@ -2,6 +2,7 @@ import { Button, Card, CardActionArea, CardActions, CardMedia, Container, makeSt
 import { localeData } from "moment";
 import { Component } from "react";
 import appSettings from "./conf/vars";
+import uuidv4 from "./utils/uuid";
 
 
 
@@ -23,19 +24,59 @@ async function stop(){
 async function call(socket){
     await start();
     let remoteConnection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
+    localstream.addEventListener('icecandidate', async (event) => {
+        console.log("ice exchange");
+    });
     localstream.getTracks().forEach((track)=>{remoteConnection.addTrack(track,localstream)});
         await remoteConnection.createOffer().then((offer)=>{
             remoteConnection.setLocalDescription(offer);
             socket.emit(offer.type,offer);
-            console.log(offer);
+            // socket.on('offer',async (msg)=>{
+            //     let offer = new RTCSessionDescription(msg); 
+            //     await remoteConnection.setRemoteDescription(offer).then(async ()=>{
+            //         await remoteConnection.createAnswer().then((answer)=>{
+            //             socket.emit(answer.type,answer);
+            //         })
+            //     });
+
+            // });
+                socket.on('answer',async (answer)=>{
+                    await remoteConnection.setRemoteDescription(answer).then(async()=>{
+                        console.log('12123');
+                    })
+                });
             })
 };
 
 
+async function acceptIncomingCall(offer){
+    let remoteConnection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
+    localstream.getTracks().forEach((track)=>{remoteConnection.addTrack(track,localstream)});
+    await remoteConnection.createOffer().then(async (description)=>{
+        await remoteConnection.setLocalDescription(description).then(async ()=>{
+            remoteConnection.setRemoteDescription(offer).then(()=>{
+                remoteConnection.createAnswer().then((answer)=>{
+                    console.log(answer);
+                })
+            });
+        });
+    })
+}
+
 class LocalVideo extends Component{
-    state={
-        classes: this.useStyles(),
-        signallingSocket: this.props.signallingSocket
+    constructor(props){
+        super(props);
+        this.state={
+            classes: this.useStyles()
+        }
+        this.signallingSocket = this.props.signallingSocket;
+        this.signallingSocket.on('offer',async (offer)=>{
+            acceptIncomingCall(offer);
+        });
+    }
+
+
+    componentDidMount(){
     }
 
     useStyles(){
@@ -53,26 +94,25 @@ class LocalVideo extends Component{
         <Card>
                 <CardMedia
                     component="video"
-                    autoPlay="true"
-                    muted="true"
+                    autoPlay={ true }
+                    muted={ true }
                     id="localvid"
                     className={this.useStyles().localVideo}
                 />
             <CardActions>
-                <Button onClick={start}>START</Button>
-                <Button onClick={stop}>STOP</Button>
+                <Button onClick={ start }>START</Button>
+                <Button onClick={ stop }>STOP</Button>
             </CardActions>
         </Card>
         <Card>
                 <CardMedia
                     component="video"
-                    autoPlay="true"
-                    muted="true"
+                    autoPlay= { true }
                     id="remoteVid"
                     className={this.useStyles().localVideo}
                 />
             <CardActions>
-                <Button onClick={()=>call(this.state.signallingSocket)}>CALL</Button>
+                <Button onClick={()=>call(this.signallingSocket)}>CALL</Button>
             </CardActions>
         </Card>
         </Container>

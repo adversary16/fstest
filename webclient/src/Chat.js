@@ -51,8 +51,8 @@ class Chat extends Component {
     // this.setState(state=>{state.name=ownName.user});
   }
 
-  chatSocket = openSocket(chatURL,{transports:['websocket'],query:{"room":this.props.chatId,"name":this.state.name},forceNew:true});
-  signallingSocket = openSocket(signallingURL,{transports:['websocket'],query:{"room":this.props.chatId,"name":this.state.name},forceNew:true});
+  chatSocket = openSocket(chatURL,{transports:['websocket'],query:{"room":this.props.chatId,"name":this.props.userId},forceNew:true});
+  signallingSocket = openSocket(signallingURL,{transports:['websocket'],query:{"room":this.props.chatId,"name":this.props.userId},forceNew:true});
   componentDidMount() {
     this.chatSocket.on('connect',() => {
       console.log(this.props.userId);
