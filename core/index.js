@@ -98,9 +98,9 @@ app.get("/api",(req,res)=>{
     socket.on('icecandidate',(msg)=>{
         socket.to(msg.to).emit('icecandidate',msg);
     });
-    socket.on('receiving',(msg)=>{
-        socket.broadcast.emit('receiving',msg);
-    })
+    socket.on('icerequest',(msg)=>{
+        socket.to(msg.to).emit('icerequest',msg);
+    });
     }
 
 

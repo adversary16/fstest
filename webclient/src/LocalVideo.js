@@ -68,6 +68,7 @@ class LocalVideo extends Component{
     this.signallingSocket.on('join',async (msg)=>{this.initiateConnection(msg)});
     this.signallingSocket.on('offer', async (msg)=>{this.receiveConnection(msg)});
     this.signallingSocket.on('answer',async (msg)=>{this.handleAnswer(msg)});
+    this.signallingSocket.on('icerequest',async (msg)=>{this.respondWithIce(msg,false)});
     this.signallingSocket.on('icecandidate',async (msg)=>{this.handleIceCandidates(msg)})
     this.remoteVideo = document.getElementById('remoteVid');
         start();
@@ -79,13 +80,15 @@ class LocalVideo extends Component{
         let re = this.signallingSocket.id;
         let to = msg.signallingSocket;
         let initiatedConnection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
+        initiatedConnection['candidatePool'] = [];
         await this.addTracksToRTC(initiatedConnection);
         let offer = await initiatedConnection.createOffer();
         await initiatedConnection.setLocalDescription(offer);
         this.signallingSocket.emit(offer.type,{cid:cid,re:re,to:to,payload:offer});
-        initiatedConnection.addEventListener('iceconnectionstatechange',(e)=>{console.log(e)});
+        initiatedConnection.addEventListener('iceconnectionstatechange',(e)=>{console.log(e.target.iceConnectionState)});
         initiatedConnection.addEventListener('icecandidate',(event)=>{
-            this.signallingSocket.emit(event.type,{cid,to,re,payload:event.candidate});
+            initiatedConnection.candidatePool.push(event);
+            // this.signallingSocket.emit(event.type,{cid,to,re,payload:event.candidate});
         })
         initiatedConnection.addEventListener('track',(event)=>{
             if (this.remoteVideo.srcObject !== event.streams[0]) {
@@ -101,13 +104,16 @@ class LocalVideo extends Component{
         let re = this.signallingSocket.id;
         let to = offer.re;
         let receivedConnection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
+        receivedConnection['candidatePool'] = [];
         try { await receivedConnection.setRemoteDescription(offer.payload)} catch (e){console.log(e)}
         try {await this.addTracksToRTC(receivedConnection)} catch (e){console.log(e)}
         let answer = await receivedConnection.createAnswer();
         try {await receivedConnection.setLocalDescription(answer)} catch (e){console.log(e)}
+        receivedConnection.addEventListener('iceconnectionstatechange',(e)=>{console.log(e.target.iceConnectionState)});
         this.signallingSocket.emit(answer.type,{cid:cid,to:to,re:re,payload:answer});
         receivedConnection.addEventListener('icecandidate',(event)=>{
-            this.signallingSocket.emit(event.type,{cid,to,re,payload:event.candidate});
+            receivedConnection.candidatePool.push(event);
+            // this.signallingSocket.emit(event.type,{cid  ,to,re,payload:event.candidate});
         });
         receivedConnection.addEventListener('track',(event)=>{
             if (this.remoteVideo.srcObject !== event.streams[0]) {
@@ -123,22 +129,34 @@ class LocalVideo extends Component{
         let to = answer.re;
         let re = this.signallingSocket.id;
         let cid = answer.cid;
-        try {await RTCconnections[cid].setRemoteDescription(answer.payload)} catch (e) {console.log(e)};
-
+        try {await RTCconnections[cid].setRemoteDescription(answer.payload)} catch (e) {console.log(e); console.log(RTCconnections[cid])};
+        this.respondWithIce(answer, true);
     }
 
     async handleIceCandidates(ice){
         if (ice.payload!=null){
-        let to = ice.re
+        let to = ice.re;
         let re = this.signallingSocket.id;
         let cid = ice.cid;
-        try {await RTCconnections[cid].addIceCandidate(ice.payload)} catch (e){console.log(e)};
+        try {await RTCconnections[cid].addIceCandidate(ice.payload)} catch (e){console.log(e); console.log(RTCconnections)};
         }
     }
 
     async addTracksToRTC(connection){
         let stream = await this.state.localstream;
             stream.getTracks().forEach((track)=>{connection.addTrack(track,stream)});
+    }
+
+    async respondWithIce(msg,shouldRespond){
+        let to = msg.re;
+        let re = this.signallingSocket.id;
+        let cid = msg.cid;
+        RTCconnections[cid].candidatePool.map((ice)=>{
+            if (ice!=null){
+                this.signallingSocket.emit(ice.type,{cid  ,to,re,payload:ice.candidate});
+            }
+        });
+        if (shouldRespond){this.signallingSocket.emit('icerequest',{cid  ,to,re,payload:{}})};
     }
 
     componentWillUnmount (){
