@@ -6,13 +6,15 @@ import Chat from './Chat'
 import Logon from './Logon';
 import Cookies from 'universal-cookie';
 
-const cookies = new Cookies();
+
 
 function GetChatWithId(){
+  const cookies = new Cookies();
   let userId  = cookies.get('token').user;
-  console.log(userId);
+  let token = cookies.get('token').token;
+  console.log(token);
     let { chatId }  = useParams();
-    return <Chat chatId={chatId} userId={userId}/>;
+    return <Chat chatId={chatId} userId={userId} token={token}/>;
 }
 
 function ReturnLogonWitId(){
@@ -22,6 +24,7 @@ function ReturnLogonWitId(){
 
 
 function verifyCookie(){
+  const cookies = new Cookies();
   return (!!cookies.get('token'));
 }
 

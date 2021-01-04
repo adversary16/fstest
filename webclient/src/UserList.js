@@ -5,7 +5,7 @@ export default ({ users }) =>
 <List>
 { (Object.keys(users).map((user) =>
   <UserEntry
-    key={ users[user].value }
+    key={ users[user].token }
     name={ users[user].name }
   />
 ))}

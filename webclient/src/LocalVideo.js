@@ -5,9 +5,8 @@ import appSettings from "./conf/vars";
 import uuidv4 from "./utils/uuid";
 
 
+let localstream = false;
 
-
-let localstream= false ;
 
 async function start(){
     localstream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
@@ -21,62 +20,126 @@ async function stop(){
         })
 }
 
-async function call(socket){
-    await start();
-    let remoteConnection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
-    localstream.addEventListener('icecandidate', async (event) => {
-        console.log("ice exchange");
-    });
-    localstream.getTracks().forEach((track)=>{remoteConnection.addTrack(track,localstream)});
-        await remoteConnection.createOffer().then((offer)=>{
-            remoteConnection.setLocalDescription(offer);
-            socket.emit(offer.type,offer);
-            // socket.on('offer',async (msg)=>{
-            //     let offer = new RTCSessionDescription(msg); 
-            //     await remoteConnection.setRemoteDescription(offer).then(async ()=>{
-            //         await remoteConnection.createAnswer().then((answer)=>{
-            //             socket.emit(answer.type,answer);
-            //         })
-            //     });
 
-            // });
-                socket.on('answer',async (answer)=>{
-                    await remoteConnection.setRemoteDescription(answer).then(async()=>{
-                        console.log('12123');
-                    })
-                });
-            })
+async function call(socket, rtc){
+    let connection = rtc;
+      try {  await connection.createOffer().then((offer)=>{
+            connection.setLocalDescription(offer);
+            console.log("Local description set");
+            socket.emit(offer.type,offer);
+            }); } catch (e) {console.log(e)}
+    return connection;
 };
 
 
-async function acceptIncomingCall(offer){
-    let remoteConnection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
-    localstream.getTracks().forEach((track)=>{remoteConnection.addTrack(track,localstream)});
-    await remoteConnection.createOffer().then(async (description)=>{
-        await remoteConnection.setLocalDescription(description).then(async ()=>{
-            remoteConnection.setRemoteDescription(offer).then(()=>{
-                remoteConnection.createAnswer().then((answer)=>{
-                    console.log(answer);
-                })
-            });
-        });
-    })
+async function acceptIncomingCall(e,rtc){
+    let remoteConnection = rtc;
+    try {remoteConnection.setRemoteDescription(e) } catch (e) {console.log(e)};
+    try {remoteConnection.createAnswer().then((answer)=>{
+        remoteConnection.setLocalDescription(answer);
+    })} catch (e) {console.log(e)}
+    return remoteConnection;
+}
+
+
+class RTCConnection extends RTCPeerConnection{
+    constructor(){
+
+    }
+    
 }
 
 class LocalVideo extends Component{
     constructor(props){
         super(props);
         this.state={
-            classes: this.useStyles()
+            classes: this.useStyles(),
+            RTCconnections: new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics}),
+            localstream: new Promise (async(resolve)=>{navigator.mediaDevices.getUserMedia({audio: true, video: true}).then((stream)=>{resolve(stream)})})
         }
         this.signallingSocket = this.props.signallingSocket;
-        this.signallingSocket.on('offer',async (offer)=>{
-            acceptIncomingCall(offer);
+        this.state.RTCconnections.candidatePool = [];
+        (async()=>{return await this.state.localstream})().then((stream)=>{
+            stream.getTracks().forEach((track)=>{this.state.RTCconnections.addTrack(track,stream)});
         });
     }
 
+  async  componentDidMount(){
+        this.signallingSocket.on('answer', async (msg)=>{
+            console.log(this.state.RTCconnections);
+            await this.state.RTCconnections.setRemoteDescription(msg);
+            this.state.RTCconnections.candidatePool.map((candidate)=>{
+                this.signallingSocket.emit('icecandidate',candidate);
+            })
+            this.signallingSocket.emit('receiving');
+            // try {await this.state.RTCconnections.setRemoteDescription(msg);
+            // } catch (e) {
+            //     console.log(e);
+            // };
+              
+        })
 
-    componentDidMount(){
+
+        this.signallingSocket.on('offer',async (offer)=>{
+            console.log("i am passive");
+            try { acceptIncomingCall(offer,this.state.RTCconnections).then((connection)=>{
+                              connection.createAnswer().then((answer)=>{
+                                  this.signallingSocket.emit(answer.type,answer);
+                              })
+                              connection.addEventListener('icestatechange', async (event) => {
+                                  console.log("ice changed");
+                              });
+  
+              })} catch (e){
+                  console.log(e);
+              }
+      });
+
+        this.state.RTCconnections.addEventListener('icecandidate', async (event) => {
+        if(event.candidate!=null){this.state.RTCconnections.candidatePool = [event.candidate, ...this.state.RTCconnections.candidatePool]}
+            // console.log(event);
+        // this.signallingSocket.emit(event.type,event.candidate);
+        });  
+
+
+        this.state.RTCconnections.addEventListener('track', async (e) => {
+            if (document.getElementById('remoteVid').srcObject !== e.streams[0]) {
+                document.getElementById('remoteVid').srcObject = e.streams[0];
+                console.log(e);
+            }
+        });
+
+
+
+        this.signallingSocket.on('join',async()=>{
+            console.log('signal received');
+            call(this.signallingSocket, this.state.RTCconnections).then(async (connection)=>{
+                // this.setState(state=>{state.RTCconnections = connection});   
+                console.log(this.state.RTCconnections);
+         
+            });
+        });
+
+        this.signallingSocket.on('icecandidate',async (msg)=>{
+            if (msg!=null){
+                console.log(msg);
+            try {await this.state.RTCconnections.addIceCandidate(msg);
+                } catch (e) {
+                console.log(e);
+            }
+            console.log(this.state.RTCconnections)
+            }
+            
+        })
+        this.signallingSocket.on('receiving',async ()=>{
+            this.state.RTCconnections.candidatePool.map((candidate)=>{
+                this.signallingSocket.emit('icecandidate',candidate);
+            })
+
+        })
+
+
+        start();
     }
 
     useStyles(){
@@ -100,7 +163,7 @@ class LocalVideo extends Component{
                     className={this.useStyles().localVideo}
                 />
             <CardActions>
-                <Button onClick={ start }>START</Button>
+            <Button onClick={()=>call(this.signallingSocket)}>CALL</Button>
                 <Button onClick={ stop }>STOP</Button>
             </CardActions>
         </Card>
@@ -112,7 +175,7 @@ class LocalVideo extends Component{
                     className={this.useStyles().localVideo}
                 />
             <CardActions>
-                <Button onClick={()=>call(this.signallingSocket)}>CALL</Button>
+
             </CardActions>
         </Card>
         </Container>

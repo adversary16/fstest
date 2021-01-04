@@ -1,20 +1,11 @@
 import React, { Component } from 'react'
 import ChatInput from './ChatInput'
-import ChatMessage from './ChatMessage'
 import openSocket from 'socket.io-client';
-import UserEntry from './UserEntry';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import ListSubheader from '@material-ui/core/ListSubheader';
 import ChatList from './ChatList';
 import UserList from './UserList';
 import { Grid, makeStyles, Paper, Toolbar } from '@material-ui/core';
-import { Cookies } from 'react-cookie';
 import LocalVideo from './LocalVideo';
 
-
-const cookies = new Cookies();
 
 // const parsedCookie = cookies.get('token');
 
@@ -23,13 +14,16 @@ const signallingURL = ':3081/signalling';
 
 class Chat extends Component {
     // parsedCookie = JSON.parse(cookies.get('token'));
-    state = {
-    classes: this.useStyles(),
-    token: '',
-    messages: [],
-    users: {},
-    chatId: this.props.chatId
-  }
+    constructor (props){
+      super(props);
+      this.state = {
+        classes: this.useStyles(),
+        messages: [],
+        users: {},
+        chatId: this.props.chatId,
+      }
+
+    }
 
   useStyles(){
     return makeStyles({
@@ -38,7 +32,7 @@ class Chat extends Component {
         minWidth:240
       },
       videoChatTab:{
-        width: 340
+        width: 200
       }
     })
 }
@@ -51,19 +45,19 @@ class Chat extends Component {
     // this.setState(state=>{state.name=ownName.user});
   }
 
-  chatSocket = openSocket(chatURL,{transports:['websocket'],query:{"room":this.props.chatId,"name":this.props.userId},forceNew:true});
-  signallingSocket = openSocket(signallingURL,{transports:['websocket'],query:{"room":this.props.chatId,"name":this.props.userId},forceNew:true});
+  chatSocket = openSocket(chatURL,{transports:['websocket'],query:{room:this.props.chatId,user:this.props.userId,token:this.props.token},forceNew:true});
+  signallingSocket = openSocket(signallingURL,{transports:['websocket'],query:{"room":this.props.chatId,"user":this.props.userId,token:this.props.token},forceNew:true});
   componentDidMount() {
     this.chatSocket.on('connect',() => {
       console.log(this.props.userId);
       // this.getOwnUserName();
-      this.setState((state=>{state.name =  this.props.userId}));
-      this.chatSocket.emit('hello',{name: this.props.userId, token: this.state.token})
+
+      this.chatSocket.emit('hello',{user: this.props.userId, token: this.state.token})
     });
 
-    this.chatSocket.on('chat message',(evt) => {
+    this.chatSocket.on('chat',(evt) => {
         const message = evt;
-        this.setState((state=>{state.name =  this.props.userId}));
+  
         this.addMessage(message)
     })
 
@@ -81,11 +75,11 @@ class Chat extends Component {
             this.addUser(evt.users[user])
         };
         // evt.users.map((user)=>{this.updateUsers(user)});
-        evt.chats.map((msg) => {this.addMessage(msg); return true });
+        evt.messages.map((msg) => {this.addMessage(msg); return true });
     })
 
     this.chatSocket.on('leave',(evt)=>{
-        let userToDelete=evt.value;
+        let userToDelete=evt.name;
         this.removeUser(userToDelete);
     });
     
@@ -115,8 +109,8 @@ class Chat extends Component {
   submitMessage = messageString => {
     // on submitting the ChatInput form, send the message, add it to the list and reset the input
     // let timestamp = new Date();
-    const message = { name: this.state.name, sender: this.chatSocket.id, value: messageString};
-    this.chatSocket.emit("chat message",message);
+    const message = { name: this.props.userId, sender: this.chatSocket.id, value: messageString};
+    this.chatSocket.emit("chat",message);
     // this.addMessage(message)
   }
 
@@ -135,7 +129,7 @@ class Chat extends Component {
       <Toolbar>Messages</Toolbar>
         <ChatList
             messages = { this.state.messages }
-            name = { this.state.name }
+            name = { this.props.userId }
         className = { this.state.classes.chatTab }/>
         <ChatInput
           ws={this.ws}

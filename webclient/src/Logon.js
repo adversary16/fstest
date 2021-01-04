@@ -33,9 +33,14 @@ async function didLogin(query){
     // let username = e.value;
     let response = await fetch("/api?action=logon&user="+query.user+"&room="+query.room);
     if (response.ok){
-        let parsedResponse = await response.json()
-        cookies.set('token', parsedResponse.token, {path: "/"+query.room});
+        let parsedResponse = await response.json();
+        if (parsedResponse.success){
+        cookies.set('token', {user:parsedResponse.user,token:parsedResponse.token,room:parsedResponse.room}, {path: "/"+query.room});
         window.location.reload();
+        } else {
+            cookies.remove('token');
+            alert ('Looks like the name is taken');
+        }
     }
     if (cookies.get('token')){console.log(false)}
     return true;

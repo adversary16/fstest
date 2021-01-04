@@ -1,16 +1,22 @@
 const e = require('cors');
 const { EventEmitter } = require('events');
 const express = require ('express');
+const { authorize } = require('passport');
 const app = express();
 const http = require('http').createServer(app);
 const SocketIo = require ("socket.io");
-const uuidv4  = require('./utils/generateUserToken');
+const { v4: uuidv4 } = require ('uuid');
 
 const { httpSettings, chatSettings, signallingSettings } = require('./config/vars');
 const ApiRouter = require('./routes/api');
+const addUserToRoom = require('./utils/addUserToRoom');
+const { associateChatSocketWithUser, associateSignallingSocketWithUser } = require('./utils/associateSocketWithUser');
+const generateUserToken = require('./utils/generateUserToken');
+const getSocketIdByUserName = require('./utils/getSocketIdByUserName');
+const isUserAlreadyInRoom = require('./utils/isUserAlreadyInRoom');
+const verifyUserByTokenAndName = require('./utils/verifyUserByTokenAndName');
 const io = SocketIo(http, {transports: ['websocket']})
 
-const activeUsers = {};
 const activeChats = {};
 const apiRouter = new ApiRouter;
 
@@ -18,70 +24,82 @@ app.use ('/js',express.static(__dirname+"/webclient/js"));
 app.get("/api",(req,res)=>{
     if (req.query.action){
         apiRouter[req.query.action]();
-        console.log(!!activeUsers[req.query.room])
-        // let response=validateUser(req
-        req.query.token = uuidv4();
-        res.status(200).send({token:JSON.stringify(req.query)});
+        if (!isUserAlreadyInRoom(req.query.user,req.query.room,activeChats)){
+            addUserToRoom(req.query.user,req.query.room,activeChats).then((token)=>{res.status(200).send({success:true, user:req.query.user, token:token})});
+            console.log('added');
+        }
+        else {
+            res.status(200).send({success:false})
+        }
     }
+    console.log(activeChats);
 })
 
-
-
-// router = {
-//     validateUser = (query) => {
-//         console.log(!!activeUsers[query.room].hasValue(query.user))
-//     },
-//     logon = (query) => {
-//         console.log("logon requested")
-//     }
-    
-// }
-
-
     const chat = io.of( chatSettings.path );
-    chat.on('connection', createClient);
+    chat.on('connection', (socket)=>{handleChatConnection(socket)});
 
-
-    function createClient(socket){
-        let roomId = socket.handshake.query.room;
-        socket.on('hello',(msg)=>{
-            socket.nickname = msg.name;
-            if (activeUsers[roomId]){
-                activeUsers[roomId][socket.nickname] = {name:socket.nickname,value:socket.id}
-            } else {
-                activeUsers[roomId] = {};
-                activeUsers[roomId][socket.nickname] = {name:socket.nickname,value:socket.id}
-            };
-            if (!activeChats[roomId]){
-                activeChats[roomId] = [];
+    function handleChatConnection(socket){
+            const name = socket.handshake.query.user;
+            const token = socket.handshake.query.token;
+            const room = socket.handshake.query.room;
+            const chatSocket = socket.id;
+            const user = {name, token, chatSocket};
+            if (!activeChats[room]){
+                activeChats[room]={users:{},messages:[]}
             }
+            let updatedState = {...activeChats[room].users[name], ...user};
+            activeChats[room].users[name] = updatedState;
+           
+            socket.join(room);
+            chat.to(socket.id).emit('welcome',activeChats[room]);
+            socket.to(room).emit('join',activeChats[room].users[name]);
 
-            socket.join(roomId);
-            chat.to(socket.id).emit('welcome',{users:activeUsers[roomId],chats:activeChats[roomId]});
-            socket.to(roomId).emit('join',{timestamp:Date.now(),value:socket.nickname, name:socket.nickname});
-        })
-    
-        socket.on('chat message',(msg)=>{
-            if(!!msg.value){
+            socket.toAll = (marker,message) => {
+                chat.to(room).emit(marker,message);
+            }
+            socket.on('chat',(msg)=>{
                 msg.timestamp = Date.now();
-                activeChats[roomId].push(msg);
-                chat.to(roomId).emit('chat message',msg)
-            }
-        });
-        socket.on("disconnect",()=>{
-            socket.to(roomId).broadcast.emit('leave',{timestamp:Date.now(),value:socket.nickname});
-            delete activeUsers[roomId][socket.nickname];
-        })
-    };
+                activeChats[room].messages.push(msg);
+                socket.toAll('chat',msg);
+            });
+            socket.on('disconnect',()=>{
+                console.log(name+"is leaving");
+                socket.nickname = name;
+                let leavingUser = activeChats[room].users[name];
+                socket.to(room).emit('leave',socket.nickname);
+                delete activeChats[room].users[name];
+            });
+    }
+
     const signalling = io.of(signallingSettings.path);
-    signalling.on('connection',(socket)=>{
-        socket.on('offer',(msg)=>{
-            socket.broadcast.emit('offer',msg);
-        });
-        socket.on('answer',(msg)=>{
-            socket.broadcast.emit('answer',msg);
-        })
+    signalling.on('connection',(socket)=>{handleSignallingConnection(socket)});
+
+    function handleSignallingConnection(socket){
+
+    const name = socket.handshake.query.user;
+    const token = socket.handshake.query.token;
+    const room = socket.handshake.query.room;
+    const signallingSocket = socket.id;
+    const user = {name, token, signallingSocket};
+
+    let updatedState = {...activeChats[room].users[name], ...user};
+    activeChats[room].users[name] = updatedState;
+
+    console.log(activeChats[room].users[name]);
+    socket.broadcast.emit('join','helo');
+    socket.on('offer',(msg)=>{
+        socket.broadcast.emit('offer',msg);
+    });
+    socket.on('answer',(msg)=>{
+        socket.broadcast.emit('answer',msg);
+    });
+    socket.on('icecandidate',(msg)=>{
+        socket.broadcast.emit('icecandidate',msg);
+    });
+    socket.on('receiving',(msg)=>{
+        socket.broadcast.emit('receiving',msg);
     })
+    }
 
 
 
