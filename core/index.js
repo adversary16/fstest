@@ -75,26 +75,28 @@ app.get("/api",(req,res)=>{
     signalling.on('connection',(socket)=>{handleSignallingConnection(socket)});
 
     function handleSignallingConnection(socket){
-
     const name = socket.handshake.query.user;
     const token = socket.handshake.query.token;
-    const room = socket.handshake.query.room;
-    const signallingSocket = socket.id;
-    const user = {name, token, signallingSocket};
-
+    let room = socket.handshake.query.room;
+    let signallingSocket = socket.id;
+    let user = {name, token, signallingSocket};
+    if (!activeChats[room]){
+        activeChats[room]={users:{},messages:[]}
+    }
     let updatedState = {...activeChats[room].users[name], ...user};
     activeChats[room].users[name] = updatedState;
+    socket.join(room);
+    socket.to(room).emit('join',user);
 
-    console.log(activeChats[room].users[name]);
-    socket.broadcast.emit('join','helo');
     socket.on('offer',(msg)=>{
-        socket.broadcast.emit('offer',msg);
+        socket.to(msg.to).emit('offer',msg);
     });
     socket.on('answer',(msg)=>{
-        socket.broadcast.emit('answer',msg);
+        console.log(activeChats[room].users);
+        socket.to(msg.to).emit('answer',msg);
     });
     socket.on('icecandidate',(msg)=>{
-        socket.broadcast.emit('icecandidate',msg);
+        socket.to(msg.to).emit('icecandidate',msg);
     });
     socket.on('receiving',(msg)=>{
         socket.broadcast.emit('receiving',msg);

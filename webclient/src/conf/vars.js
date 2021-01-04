@@ -10,7 +10,13 @@ const appSettings = {
     },
     socketBasePath:"/socket.io",
     webrtc:{
-      sdpSemantics:"unified-plan"
+      sdpSemantics:"unified-plan",
+      constraints:{
+        video:{
+          "width":240,
+          "height":160
+        }
+      }
     }
   }
 

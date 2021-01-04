@@ -5,6 +5,7 @@ import './App.css'
 import Chat from './Chat'
 import Logon from './Logon';
 import Cookies from 'universal-cookie';
+import uuidv4 from './utils/uuid';
 
 
 
@@ -41,7 +42,7 @@ class App extends Component {
     return (
       <BrowserRouter>
         <Switch>
-          <Route path="/:chatId" children= { <ValidateAccess/> }  />
+          <Route key={ uuidv4 } path="/:chatId" children= { <ValidateAccess/> }  />
         </Switch>
       </BrowserRouter>
     )

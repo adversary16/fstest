@@ -5,6 +5,7 @@ import ChatList from './ChatList';
 import UserList from './UserList';
 import { Grid, makeStyles, Paper, Toolbar } from '@material-ui/core';
 import LocalVideo from './LocalVideo';
+import uuidv4 from './utils/uuid';
 
 
 // const parsedCookie = cookies.get('token');
@@ -116,7 +117,7 @@ class Chat extends Component {
 
   render() {
     return (
-    <Grid container className="main" justify="center" padding={20}>
+    <Grid container className="main" justify="center" padding={20} key={ uuidv4 }>
         <Paper padding="20">
         <Toolbar>
         Users
@@ -140,7 +141,7 @@ class Chat extends Component {
         <Toolbar>
           VideoChat
          </Toolbar>
-          <LocalVideo signallingSocket = { this.signallingSocket }/>
+          <LocalVideo signallingSocket = { this.signallingSocket } key={uuidv4}/>
         </Paper>
         </Grid>
     )
