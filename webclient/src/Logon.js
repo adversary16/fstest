@@ -1,10 +1,8 @@
 import { Button, Grid, Paper, TextField } from '@material-ui/core';
 import React, { Component } from 'react';
-import { useCookies } from "react-cookie";
-import { render } from 'react-dom';
 import Cookies from 'universal-cookie';
 
-const { List, Toolbar, makeStyles, Container } = require("@material-ui/core");
+const {  Toolbar, makeStyles } = require("@material-ui/core");
 
 // function HandleCookie(val){
 //     console.log('cookie access');
@@ -16,16 +14,16 @@ const { List, Toolbar, makeStyles, Container } = require("@material-ui/core");
 // }
 // }
 
-const useStyles = makeStyles({
-    logonBoxWrapper:{
-        width:'100%',
-        display: 'flex'
-    },
-    logonBox: {
-        width: 512,
-        height: 320
-    }
-})
+// const useStyles = makeStyles({
+//     logonBoxWrapper:{
+//         width:'100%',
+//         display: 'flex'
+//     },
+//     logonBox: {
+//         width: 512,
+//         height: 320
+//     }
+// })
 
 const cookies = new Cookies();
 

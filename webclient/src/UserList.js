@@ -1,11 +1,11 @@
-import { List, Toolbar } from "@material-ui/core";
+import { List } from "@material-ui/core";
 import UserEntry from "./UserEntry";
 
 function isMe(ownUserId,userIdToMatch){
   return (ownUserId===userIdToMatch)
 }
 
-export default ({ users, me }) =>
+export default ({ users, me }) => (
 <List>
 { (Object.keys(users).map((user) =>
   <UserEntry
@@ -16,3 +16,4 @@ export default ({ users, me }) =>
   />
 ))}
 </List>
+)

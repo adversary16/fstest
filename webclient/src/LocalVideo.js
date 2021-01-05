@@ -1,5 +1,4 @@
-import { Button, Card, CardActionArea, CardActions, CardMedia, Container, makeStyles, Toolbar } from "@material-ui/core";
-import { localeData } from "moment";
+import { Button, Card, CardActions, CardMedia, Container, makeStyles, Toolbar } from "@material-ui/core";
 import { Component } from "react";
 import appSettings from "./conf/vars";
 import uuidv4 from "./utils/uuid";
@@ -15,10 +14,13 @@ class LocalVideo extends Component{
         this.state={
             classes: this.useStyles(),
             localstream: new Promise (async(resolve)=>{navigator.mediaDevices.getUserMedia({audio: true, video: appSettings.webrtc.constraints.video}).then((stream)=>{resolve(stream)})}),
-            remotestreams: {}
+            remotestreams: {},
+            isScreensharingOn: false 
         
         }
         this.muteCamera = this.muteCamera.bind(this);
+        this.muteMic = this.muteMic.bind(this);
+        this.toggleScreensharing = this.toggleScreensharing.bind(this);
     }
 
     useStyles(){
@@ -31,14 +33,47 @@ class LocalVideo extends Component{
     }
  
     async start(){
-        let streamWindow =  document.getElementById('localvid');
-        streamWindow.srcObject = await this.state.localstream;
+        this.streamWindow.srcObject = await this.state.localstream;
     }
 
     async muteCamera(){
         (await this.state.localstream).getVideoTracks().forEach((track)=>{
-            track.stop();
+            track.enabled=!track.enabled;
+            console.log(track);
         })
+    }
+    async muteMic(){
+        (await this.state.localstream).getTracks().forEach((track)=>{
+            if (track.kind==='audio'){
+                track.enabled=!track.enabled;
+            }
+        })
+    }
+
+    async toggleScreensharing(){
+        if (!this.state.isScreensharingOn){
+        let screensharing = await navigator.mediaDevices.getDisplayMedia({video: appSettings.webrtc.constraints.video});
+        let screenstream = screensharing.getVideoTracks()[0];
+        Object.keys(RTCconnections).map((key)=>{
+            RTCconnections[key].getSenders().map((sender)=>{
+                if (sender.track.kind === screenstream.kind){
+                    sender.replaceTrack(screenstream);
+                    screenstream.addEventListener('ended',this.toggleScreensharing);
+                    this.setState({isScreensharingOn:true})
+                } 
+            })
+        })
+        } else {
+            let videoStream = (await this.state.localstream).getVideoTracks()[0];
+            Object.keys(RTCconnections).map((key)=>{
+                RTCconnections[key].getSenders().map((sender)=>{
+                    if (sender.track.kind === videoStream.kind){
+                        sender.replaceTrack(videoStream);
+                        this.setState({isScreensharingOn:false})
+                    } 
+                })
+            })
+        }
     }
 
   async  componentDidMount(){
@@ -50,6 +85,7 @@ class LocalVideo extends Component{
     this.signallingSocket.on('icecandidate',async (msg)=>{this.handleIceCandidates(msg)})
     this.signallingSocket.on('leave', async (msg) => {this.removeDisconnectedUser(msg)});
     this.remoteVideo = document.getElementById('remoteVid');
+    this.streamWindow =  document.getElementById('localvid');
         this.start();
     }
 
@@ -70,7 +106,7 @@ class LocalVideo extends Component{
         });
         connection.addEventListener('iceconnectionstatechange',(e)=>{
             console.log('Ice connection state changed to '+e.target.iceConnectionState+" "+to);
-            if (e.target.iceConnectionState==('disconnected'||'new')){
+            if (e.target.iceConnectionState===('disconnected'||'new')){
                 e.target.close();
                 if (!!RTCconnections[to]){
                     delete RTCconnections[to];
@@ -105,8 +141,6 @@ class LocalVideo extends Component{
 
     async handleAnswer(answer){
         let to = answer.re;
-        let re = answer.to;
-        let cid = answer.cid;
         try {await RTCconnections[to].setRemoteDescription(answer.payload)} catch (e) {console.log("error"+e)};
         // this.respondWithIce(answer, true);
     }
@@ -114,8 +148,6 @@ class LocalVideo extends Component{
     async handleIceCandidates(ice){
         if (ice.payload!=null){
         let to = ice.re;
-        let re = ice.to;
-        let cid = ice.cid;
         try {await RTCconnections[to].addIceCandidate(ice.payload)} catch (e){console.log(e); console.log(RTCconnections)};
         }
     }
@@ -138,6 +170,7 @@ class LocalVideo extends Component{
     componentWillUnmount (){
         Object.keys(RTCconnections).map((to)=>{
             RTCconnections[to].close();
+            return true;
         });
         RTCconnections = {};
         this.setState({remotestreams:{}});
@@ -164,6 +197,8 @@ class LocalVideo extends Component{
                 />
             <CardActions>
                 <Button onClick={ this.muteCamera }>MUTE CAM</Button>
+                <Button onClick={ this.muteMic }>MUTE MIC</Button>
+                <Button onClick={ this.toggleScreensharing }>SCREEN</Button>
             </CardActions>
         </Card>
         { Object.keys(this.state.remotestreams).map((to)=>
