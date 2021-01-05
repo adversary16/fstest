@@ -55,30 +55,30 @@ class LocalVideo extends Component{
 
     async initializeConnection(msg){
         let cid = msg.token || msg.cid;
-        delete RTCconnections[cid]
         let re = this.signallingSocket.id;
         let to = msg.signallingSocket || msg.re;
         let name = msg.name;
+        delete RTCconnections[to]
         let connection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
         connection['outputStream'] = false;
         await this.addTracksToRTC(connection);
         connection.addEventListener('icecandidate',(ev)=>{});
         connection.addEventListener('track',(track)=>{
             connection.outputStream = track.streams[0];
-            this.setState((state=>( state.remotestreams[cid]={stream:track.streams[0],name})));
+            this.setState((state=>( state.remotestreams[to]={stream:track.streams[0],name})));
             console.log(connection);
         });
         connection.addEventListener('iceconnectionstatechange',(e)=>{
-            console.log('Ice connection state changed to '+e.target.iceConnectionState+" "+cid);
+            console.log('Ice connection state changed to '+e.target.iceConnectionState+" "+to);
             if (e.target.iceConnectionState==('disconnected'||'new')){
                 e.target.close();
-                if (!!RTCconnections[cid]){
-                    delete RTCconnections[cid];
+                if (!!RTCconnections[to]){
+                    delete RTCconnections[to];
                 }
                 console.log(RTCconnections);
                 let prevState = this.state.remotestreams;
-                if (!!prevState[cid]){
-                    delete RTCconnections[cid];
+                if (!!prevState[to]){
+                    delete RTCconnections[to];
                 };
                 this.setState({remotestreams:prevState});
             }
@@ -99,7 +99,7 @@ class LocalVideo extends Component{
         await connection.setLocalDescription(localDescription);
         await this.signallingSocket.emit(localDescription.type,{cid,re,to,payload:localDescription});
 
-        RTCconnections[cid] = connection;
+        RTCconnections[to] = connection;
         console.log(RTCconnections);
     }
 
@@ -107,7 +107,7 @@ class LocalVideo extends Component{
         let to = answer.re;
         let re = answer.to;
         let cid = answer.cid;
-        try {await RTCconnections[cid].setRemoteDescription(answer.payload)} catch (e) {console.log("error"+e)};
+        try {await RTCconnections[to].setRemoteDescription(answer.payload)} catch (e) {console.log("error"+e)};
         // this.respondWithIce(answer, true);
     }
 
@@ -116,7 +116,7 @@ class LocalVideo extends Component{
         let to = ice.re;
         let re = ice.to;
         let cid = ice.cid;
-        try {await RTCconnections[cid].addIceCandidate(ice.payload)} catch (e){console.log(e); console.log(RTCconnections)};
+        try {await RTCconnections[to].addIceCandidate(ice.payload)} catch (e){console.log(e); console.log(RTCconnections)};
         }
     }
 
@@ -125,19 +125,19 @@ class LocalVideo extends Component{
             stream.getTracks().forEach((track)=>{connection.addTrack(track,stream)});
     }
 
-    async removeDisconnectedUser(callId){
-        let cid = callId;
-        // RTCconnections[cid].close();
-        delete RTCconnections[cid];
+    async removeDisconnectedUser(signallingSocketId){
+        let to = signallingSocketId;
+        // RTCconnections[to].close();
+        delete RTCconnections[to];
         let prevState = this.state.remotestreams;
-        delete prevState[cid];
+        delete prevState[to];
         this.setState({remotestreams:prevState});
-        console.log('user with token $callid left'+cid)
+        console.log('user with token $callid left'+to)
     }
 
     componentWillUnmount (){
-        Object.keys(RTCconnections).map((cid)=>{
-            RTCconnections[cid].close();
+        Object.keys(RTCconnections).map((to)=>{
+            RTCconnections[to].close();
         });
         RTCconnections = {};
         this.setState({remotestreams:{}});
@@ -166,9 +166,9 @@ class LocalVideo extends Component{
                 <Button onClick={ this.muteCamera }>MUTE CAM</Button>
             </CardActions>
         </Card>
-        { Object.keys(this.state.remotestreams).map((cid)=>
+        { Object.keys(this.state.remotestreams).map((to)=>
             
-        <RemoteVideoCard key = { cid } cid={cid} srcObject={ this.state.remotestreams[cid] } />
+        <RemoteVideoCard key = { to } to={to} srcObject={ this.state.remotestreams[to] } />
         )}
         </Container>
     )}

@@ -6,19 +6,19 @@ class RemoteVideoCard extends Component{
         super(props)
     }
     componentDidMount(){
-        let remotevid = document.getElementById(this.props.cid);
+        let remotevid = document.getElementById(this.props.to);
         remotevid.srcObject = this.props.srcObject.stream;
     }
 
     render(){
         return(
-        <Card key = { this.props.cid }>
+        <Card key = { this.props.to }>
                 <CardMedia
                     component="video"
                     autoPlay= { true }
 
-                    id={ this.props.cid }
-                    // ref = { remotevid=> {this.videoref = remotevid; this.videoref.srcObject = this.state.remotestreams[cid]}}
+                    id={ this.props.to }
+                    // ref = { remotevid=> {this.videoref = remotevid; this.videoref.srcObject = this.state.remotestreams[to]}}
                     // className={this.useStyles().localVideo}
                 />
             <CardActions>

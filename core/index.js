@@ -112,7 +112,7 @@ app.get("/api",(req,res)=>{
         socket.to(msg.to).emit('icerequest',msg);
     });
     socket.on('disconnect',()=>{
-        socket.to(room).emit('leave',socket.nickname);
+        socket.to(room).emit('leave',socket.id);
     })
     }
 
