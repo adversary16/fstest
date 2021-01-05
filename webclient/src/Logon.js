@@ -31,6 +31,7 @@ const cookies = new Cookies();
 
 async function didLogin(query){
     // let username = e.value;
+
     let response = await fetch("/api?action=logon&user="+query.user+"&room="+query.room);
     if (response.ok){
         let parsedResponse = await response.json();

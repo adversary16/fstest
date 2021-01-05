@@ -1,45 +1,11 @@
-import { Button, Card, CardActionArea, CardActions, CardMedia, Container, makeStyles } from "@material-ui/core";
+import { Button, Card, CardActionArea, CardActions, CardMedia, Container, makeStyles, Toolbar } from "@material-ui/core";
 import { localeData } from "moment";
 import { Component } from "react";
 import appSettings from "./conf/vars";
 import uuidv4 from "./utils/uuid";
+import RemoteVideoCard  from './RemoteVideoCard'
 
 
-let localstream = false;
-
-
-async function start(){
-    localstream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
-    const streamWindow = document.getElementById('localvid');
-    streamWindow.srcObject = localstream;
-}
-
-async function stop(){
-        localstream.getVideoTracks().forEach(track=>{
-            track.stop();
-        })
-}
-
-
-async function call(socket, rtc){
-    let connection = rtc;
-      try {  await connection.createOffer().then((offer)=>{
-            connection.setLocalDescription(offer);
-            console.log("Local description set");
-            socket.emit(offer.type,offer);
-            }); } catch (e) {console.log(e)}
-    return connection;
-};
-
-
-async function acceptIncomingCall(e,rtc){
-    let remoteConnection = rtc;
-    try {remoteConnection.setRemoteDescription(e) } catch (e) {console.log(e)};
-    try {remoteConnection.createAnswer().then((answer)=>{
-        remoteConnection.setLocalDescription(answer);
-    })} catch (e) {console.log(e)}
-    return remoteConnection;
-}
 
 let RTCconnections = {};
 
@@ -48,10 +14,11 @@ class LocalVideo extends Component{
         super(props);
         this.state={
             classes: this.useStyles(),
-            localstream: new Promise (async(resolve)=>{navigator.mediaDevices.getUserMedia({audio: true, video: appSettings.webrtc.constraints.video}).then((stream)=>{resolve(stream)})})
+            localstream: new Promise (async(resolve)=>{navigator.mediaDevices.getUserMedia({audio: true, video: appSettings.webrtc.constraints.video}).then((stream)=>{resolve(stream)})}),
+            remotestreams: {}
         
         }
-
+        this.muteCamera = this.muteCamera.bind(this);
     }
 
     useStyles(){
@@ -63,80 +30,91 @@ class LocalVideo extends Component{
         })
     }
  
-  async  componentDidMount(){
-    this.signallingSocket = this.props.signallingSocket;
-    this.signallingSocket.on('join',async (msg)=>{this.initiateConnection(msg)});
-    this.signallingSocket.on('offer', async (msg)=>{this.receiveConnection(msg)});
-    this.signallingSocket.on('answer',async (msg)=>{this.handleAnswer(msg)});
-    this.signallingSocket.on('icerequest',async (msg)=>{this.respondWithIce(msg,false)});
-    this.signallingSocket.on('icecandidate',async (msg)=>{this.handleIceCandidates(msg)})
-    this.remoteVideo = document.getElementById('remoteVid');
-        start();
+    async start(){
+        let streamWindow =  document.getElementById('localvid');
+        streamWindow.srcObject = await this.state.localstream;
     }
 
-   async  initiateConnection(msg){
-        let cid = msg.token;
-        console.log('i initiate a call');
-        let re = this.signallingSocket.id;
-        let to = msg.signallingSocket;
-        let initiatedConnection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
-        initiatedConnection['candidatePool'] = [];
-        await this.addTracksToRTC(initiatedConnection);
-        let offer = await initiatedConnection.createOffer();
-        await initiatedConnection.setLocalDescription(offer);
-        this.signallingSocket.emit(offer.type,{cid:cid,re:re,to:to,payload:offer});
-        initiatedConnection.addEventListener('iceconnectionstatechange',(e)=>{console.log(e.target.iceConnectionState)});
-        initiatedConnection.addEventListener('icecandidate',(event)=>{
-            initiatedConnection.candidatePool.push(event);
-            // this.signallingSocket.emit(event.type,{cid,to,re,payload:event.candidate});
+    async muteCamera(){
+        (await this.state.localstream).getVideoTracks().forEach((track)=>{
+            track.stop();
         })
-        initiatedConnection.addEventListener('track',(event)=>{
-            if (this.remoteVideo.srcObject !== event.streams[0]) {
-                this.remoteVideo.srcObject = event.streams[0];
-                console.log('pc2 received remote stream');
-              }
-        })
-        RTCconnections[cid] = initiatedConnection;
     }
-    async receiveConnection(offer){
-        let cid = offer.cid;
-        console.log('i receive a call');
+
+  async  componentDidMount(){
+    this.signallingSocket = this.props.signallingSocket;
+    this.signallingSocket.on('join',async (msg)=>{this.initializeConnection(msg)});
+    this.signallingSocket.on('offer', async (msg)=>{this.initializeConnection(msg)});
+    this.signallingSocket.on('answer',async (msg)=>{this.handleAnswer(msg)});
+    // this.signallingSocket.on('icerequest',async (msg)=>{this.respondWithIce(msg,false)});
+    this.signallingSocket.on('icecandidate',async (msg)=>{this.handleIceCandidates(msg)})
+    this.signallingSocket.on('leave', async (msg) => {this.removeDisconnectedUser(msg)});
+    this.remoteVideo = document.getElementById('remoteVid');
+        this.start();
+    }
+
+    async initializeConnection(msg){
+        let cid = msg.token || msg.cid;
+        delete RTCconnections[cid]
         let re = this.signallingSocket.id;
-        let to = offer.re;
-        let receivedConnection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
-        receivedConnection['candidatePool'] = [];
-        try { await receivedConnection.setRemoteDescription(offer.payload)} catch (e){console.log(e)}
-        try {await this.addTracksToRTC(receivedConnection)} catch (e){console.log(e)}
-        let answer = await receivedConnection.createAnswer();
-        try {await receivedConnection.setLocalDescription(answer)} catch (e){console.log(e)}
-        receivedConnection.addEventListener('iceconnectionstatechange',(e)=>{console.log(e.target.iceConnectionState)});
-        this.signallingSocket.emit(answer.type,{cid:cid,to:to,re:re,payload:answer});
-        receivedConnection.addEventListener('icecandidate',(event)=>{
-            receivedConnection.candidatePool.push(event);
-            // this.signallingSocket.emit(event.type,{cid  ,to,re,payload:event.candidate});
+        let to = msg.signallingSocket || msg.re;
+        let name = msg.name;
+        let connection = new RTCPeerConnection({sdpSemantics:appSettings.webrtc.sdpSemantics});
+        connection['outputStream'] = false;
+        await this.addTracksToRTC(connection);
+        connection.addEventListener('icecandidate',(ev)=>{});
+        connection.addEventListener('track',(track)=>{
+            connection.outputStream = track.streams[0];
+            this.setState((state=>( state.remotestreams[cid]={stream:track.streams[0],name})));
+            console.log(connection);
         });
-        receivedConnection.addEventListener('track',(event)=>{
-            if (this.remoteVideo.srcObject !== event.streams[0]) {
-                this.remoteVideo.srcObject = event.streams[0];
-                console.log('pc2 received remote stream');
-              }
+        connection.addEventListener('iceconnectionstatechange',(e)=>{
+            console.log('Ice connection state changed to '+e.target.iceConnectionState+" "+cid);
+            if (e.target.iceConnectionState==('disconnected'||'new')){
+                e.target.close();
+                if (!!RTCconnections[cid]){
+                    delete RTCconnections[cid];
+                }
+                console.log(RTCconnections);
+                let prevState = this.state.remotestreams;
+                if (!!prevState[cid]){
+                    delete RTCconnections[cid];
+                };
+                this.setState({remotestreams:prevState});
+            }
         });
-        RTCconnections[cid] = receivedConnection;
-        console.log(receivedConnection);
+        connection.addEventListener('icegatheringstatechange',(e)=>{console.log('Ice gathering state changed to '+e.target.iceGatheringState)});
+        connection.addEventListener('icecandidate',async (e)=>{
+            await this.signallingSocket.emit(e.type,{cid,re,to,payload:e.candidate});
+        })
+
+        let localDescription;
+        if (!!msg.token){
+            localDescription = await connection.createOffer();
+        } else {
+            await connection.setRemoteDescription(msg.payload);
+            localDescription = await connection.createAnswer();
+
+        }
+        await connection.setLocalDescription(localDescription);
+        await this.signallingSocket.emit(localDescription.type,{cid,re,to,payload:localDescription});
+
+        RTCconnections[cid] = connection;
+        console.log(RTCconnections);
     }
 
     async handleAnswer(answer){
         let to = answer.re;
-        let re = this.signallingSocket.id;
+        let re = answer.to;
         let cid = answer.cid;
-        try {await RTCconnections[cid].setRemoteDescription(answer.payload)} catch (e) {console.log(e); console.log(RTCconnections[cid])};
-        this.respondWithIce(answer, true);
+        try {await RTCconnections[cid].setRemoteDescription(answer.payload)} catch (e) {console.log("error"+e)};
+        // this.respondWithIce(answer, true);
     }
 
     async handleIceCandidates(ice){
         if (ice.payload!=null){
         let to = ice.re;
-        let re = this.signallingSocket.id;
+        let re = ice.to;
         let cid = ice.cid;
         try {await RTCconnections[cid].addIceCandidate(ice.payload)} catch (e){console.log(e); console.log(RTCconnections)};
         }
@@ -147,28 +125,36 @@ class LocalVideo extends Component{
             stream.getTracks().forEach((track)=>{connection.addTrack(track,stream)});
     }
 
-    async respondWithIce(msg,shouldRespond){
-        let to = msg.re;
-        let re = this.signallingSocket.id;
-        let cid = msg.cid;
-        RTCconnections[cid].candidatePool.map((ice)=>{
-            if (ice!=null){
-                this.signallingSocket.emit(ice.type,{cid  ,to,re,payload:ice.candidate});
-            }
-        });
-        if (shouldRespond){this.signallingSocket.emit('icerequest',{cid  ,to,re,payload:{}})};
+    async removeDisconnectedUser(callId){
+        let cid = callId;
+        // RTCconnections[cid].close();
+        delete RTCconnections[cid];
+        let prevState = this.state.remotestreams;
+        delete prevState[cid];
+        this.setState({remotestreams:prevState});
+        console.log('user with token $callid left'+cid)
     }
 
     componentWillUnmount (){
         Object.keys(RTCconnections).map((cid)=>{
             RTCconnections[cid].close();
-        })
+        });
+        RTCconnections = {};
+        this.setState({remotestreams:{}});
+
+    }
+
+    findUserNameBySignallingSocket(socketId){
+        let sid = socketId;
+        let userName = Object.keys(this.props.users).find(user=>this.props.users[user].signallingSocket === sid );
+        return userName;
     }
 
     render(){
         return(
-        <Container key={ uuidv4 }>
-        <Card>
+        <Container>
+            <Toolbar> {this.props.name} </Toolbar>
+        <Card key = { uuidv4+"x" }>
                 <CardMedia
                     component="video"
                     autoPlay={ true }
@@ -177,21 +163,13 @@ class LocalVideo extends Component{
                     className={this.useStyles().localVideo}
                 />
             <CardActions>
-            <Button onClick={()=>call(this.signallingSocket)}>CALL</Button>
-                <Button onClick={ stop }>STOP</Button>
+                <Button onClick={ this.muteCamera }>MUTE CAM</Button>
             </CardActions>
         </Card>
-        <Card>
-                <CardMedia
-                    component="video"
-                    autoPlay= { true }
-                    id="remoteVid"
-                    className={this.useStyles().localVideo}
-                />
-            <CardActions>
-
-            </CardActions>
-        </Card>
+        { Object.keys(this.state.remotestreams).map((cid)=>
+            
+        <RemoteVideoCard key = { cid } cid={cid} srcObject={ this.state.remotestreams[cid] } />
+        )}
         </Container>
     )}
 };

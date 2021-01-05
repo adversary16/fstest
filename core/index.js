@@ -46,6 +46,10 @@ app.get("/api",(req,res)=>{
             const user = {name, token, chatSocket};
             if (!activeChats[room]){
                 activeChats[room]={users:{},messages:[]}
+            } else {
+            if (!activeChats[room].users[name]){
+                activeChats[room].users[name]=user;
+            }
             }
             let updatedState = {...activeChats[room].users[name], ...user};
             activeChats[room].users[name] = updatedState;
@@ -79,16 +83,22 @@ app.get("/api",(req,res)=>{
     const token = socket.handshake.query.token;
     let room = socket.handshake.query.room;
     let signallingSocket = socket.id;
-    let user = {name, token, signallingSocket};
+    let user = {name, token, signallingSocket, cid:token};
     if (!activeChats[room]){
         activeChats[room]={users:{},messages:[]}
+    } else {
+    if (!activeChats[room].users[name]){
+        activeChats[room].users[name]=user;
+    }
     }
     let updatedState = {...activeChats[room].users[name], ...user};
     activeChats[room].users[name] = updatedState;
     socket.join(room);
+    socket.nickname = token;
     socket.to(room).emit('join',user);
 
     socket.on('offer',(msg)=>{
+        msg.name = name;
         socket.to(msg.to).emit('offer',msg);
     });
     socket.on('answer',(msg)=>{
@@ -101,6 +111,9 @@ app.get("/api",(req,res)=>{
     socket.on('icerequest',(msg)=>{
         socket.to(msg.to).emit('icerequest',msg);
     });
+    socket.on('disconnect',()=>{
+        socket.to(room).emit('leave',socket.nickname);
+    })
     }
 
 

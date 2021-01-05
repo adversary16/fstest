@@ -27,7 +27,7 @@ class Chat extends Component {
     }
 
   useStyles(){
-    return makeStyles({
+    let styles = makeStyles({
       userListTab:{
         width: '30%',
         minWidth:240
@@ -35,7 +35,8 @@ class Chat extends Component {
       videoChatTab:{
         width: 200
       }
-    })
+    });
+    return styles;
 }
 
 
@@ -118,12 +119,13 @@ class Chat extends Component {
   render() {
     return (
     <Grid container className="main" justify="center" padding={20} key={ uuidv4 }>
-        <Paper padding="20">
+        <Paper padding="20" className="test">
         <Toolbar>
         Users
     </Toolbar>
       <UserList 
             users = { this.state.users }
+            me = {this.props.userId}
       />
       </Paper>
       <Paper>
@@ -141,7 +143,7 @@ class Chat extends Component {
         <Toolbar>
           VideoChat
          </Toolbar>
-          <LocalVideo signallingSocket = { this.signallingSocket } key={uuidv4}/>
+          <LocalVideo signallingSocket = { this.signallingSocket } name = {this.props.userId} key={uuidv4}/>
         </Paper>
         </Grid>
     )

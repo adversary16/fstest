@@ -1,7 +1,7 @@
-import { List, ListItem } from '@material-ui/core'
+import { List, ListItem, Typography } from '@material-ui/core'
 import React from 'react'
 
-export default ({ name,token }) =>
+export default ({ name, token, isMe }) =>
 <ListItem key={token}>
-    {name}
+    {name} <Typography visible={ isMe }>{ (isMe)?" (Me) ":'' }</Typography>
 </ListItem>
