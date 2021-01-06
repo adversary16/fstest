@@ -1,13 +1,12 @@
-const { resolve } = require("path");
+const User = require("../models/user.model");
 const generateUserToken = require("./generateUserToken");
 
-function addUserToRoom(user,room,database){
+function addUserToRoom(user,room){
     let userToken = generateUserToken(user,room);
-
-    return new Promise((resolve)=>{
-        database[room].users[user]={token:userToken,name:user};
+    return new Promise(async (resolve)=>{
+        let newUser = new User({name:user,token:userToken});
+        await newUser.save();
         resolve(userToken);
     }) 
 }
-
 module.exports=addUserToRoom

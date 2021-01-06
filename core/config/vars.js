@@ -7,5 +7,12 @@ module.exports = {
     },
     chatSettings:{
         path: "/chat"
+    },
+    mongodbSettings:{
+        path: 'mongodb://localhost:27018/test',
+        options:{
+            useNewUrlParser: true,
+            useFindAndModify: false
+        }
     }
 }
