@@ -33,17 +33,9 @@ app.use('/api',apiRoutes);
             const chatSocket = socket.id;
 
             const roomId = (await Room.findOne({name:room},'_id').exec()._str);
-            // let thisChatUserModel = mongoose.model(token,userSchema);
-            // let anotherUser = new thisChatUserModel({name,token,chatSocket, room:roomId});
-            // anotherUser.save();
-
-            let user = new User({name,token,chatSocket, room:roomId});
-            if (!(await User.findOneAndUpdate({token},{name,token,chatSocket,room:roomId}).exec())){
-                user.save();
-            };
-           
+            await User.findOneAndUpdate({token:token},{$set:{chatSocket:chatSocket}});           
             socket.join(room);
-            let allUsers = await User.find({room:roomId}).exec();
+
             let welcomeMessage = {users:(await User.find({room:roomId}).exec()), messages:(await Message.find({room:roomId}).exec())};
             chat.to(socket.id).emit('welcome',welcomeMessage);
 
@@ -107,14 +99,11 @@ class ChatServer extends EventEmitter{
         super();
         this.chat = chat;
         this.signalling = signalling;
-        this.rooms = {};
     }
     async start(){
         http.listen(httpSettings.port,()=>{});
         // await mongoDb.connect();
     }
-    createChatRoom(){}
-    onNewUser(){}
 }
 
 const host = new ChatServer()
