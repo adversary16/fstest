@@ -6,7 +6,7 @@ import appSettings from './conf/vars';
 import authorizeUser from './utils/authorizeUser';
 import removeNonAlphanumeric from './utils/removeNonAlphanumeric';
 
-const {  Toolbar, makeStyles } = require("@material-ui/core");
+const {  Toolbar } = require("@material-ui/core");
 
 
 class Logon extends Component {
@@ -37,7 +37,7 @@ class Logon extends Component {
               
             this.chatId = (inputRoom.length>=appSettings.navigation.minRoomNameLength) ? inputRoom : this.chatId;
           }
-        await authorizeUser({name:e.target[0].value,room:this.chatId},this.reloadAfterLogon);
+         authorizeUser({name:e.target[0].value,room:this.chatId},this.reloadAfterLogon);
         }}>
             <TextField  inputProps={{ maxLength: 20, minLength: appSettings.navigation.minUserNameLength }} onInput = { validateInput} label={"Username: min "+appSettings.navigation.minUserNameLength+" characters"} variant="outlined" name="logon" id="logon_username"/>
             { ((!this.chatId)||(this.chatId.length< appSettings.navigation.minRoomNameLength)) ?

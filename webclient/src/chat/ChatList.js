@@ -2,7 +2,7 @@ import moment from 'moment';
 import React from 'react';
 
 
-const { List, Toolbar, makeStyles, Container } = require("@material-ui/core");
+const { List, makeStyles, Container } = require("@material-ui/core");
 const { default: ChatMessage } = require("./ChatMessage");
 // const { default: useStyles } = require("./styles");
 
@@ -31,7 +31,7 @@ const useStyles = makeStyles({
 })
 
 function IsOwn (sendername, ownname){
-return (sendername==ownname)
+return (sendername===ownname)
 }
 
 export default function ChatList({messages, name}){
