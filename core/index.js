@@ -1,43 +1,27 @@
-const e = require('cors');
 const { EventEmitter } = require('events');
 const express = require ('express');
-const { authorize } = require('passport');
 const app = express();
 const http = require('http').createServer(app);
 const SocketIo = require ("socket.io");
 const { v4: uuidv4 } = require ('uuid');
 const apiRoutes = require('./routes/api');  
-const db = require ('./config/mongodb')
+const mongoDb = require ('./config/mongodb');
+const mongoose  = require("mongoose");
 
 const { httpSettings, chatSettings, signallingSettings } = require('./config/vars');
-const ApiRouter = require('./routes/api');
 const addUserToRoom = require('./utils/addUserToRoom');
-const { associateChatSocketWithUser, associateSignallingSocketWithUser } = require('./utils/associateSocketWithUser');
-const generateUserToken = require('./utils/generateUserToken');
-const getSocketIdByUserName = require('./utils/getSocketIdByUserName');
 const isUserAlreadyInRoom = require('./utils/isUserAlreadyInRoom');
-const verifyUserByTokenAndName = require('./utils/verifyUserByTokenAndName');
-const User = require('./models/user.model');
-const Room = require('./models/room.model');
-const Message = require('./models/message.model');
+const { Room } = require('./models/room.model');
+const { Message } = require('./models/message.model');
+const Log = require('./models/log.model');
+const { userSchema, User } = require('./models/user.model');
 const io = SocketIo(http, {transports: ['websocket']})
 
-const apiRouter = new ApiRouter;
-
 app.use ('/js',express.static(__dirname+"/webclient/js"));
-app.get("/api",async (req,res)=>{
-    if (req.query.action){
-        // apiRouter[req.query.action]();
-        if (!(await isUserAlreadyInRoom(req.query.user,req.query.room))){
-            console.log('new user');
-            addUserToRoom(req.query.user,req.query.room).then((token)=>{res.status(200).send({success:true, user:req.query.user, token:token})});
-            console.log('added');
-        }
-        else {
-            res.status(200).send({success:false})
-        }
-    }
-})
+app.use(express.json());
+app.use('/api',apiRoutes);
+
+
 
     const chat = io.of( chatSettings.path );
     chat.on('connection', (socket)=>{handleChatConnection(socket)});
@@ -48,18 +32,18 @@ app.get("/api",async (req,res)=>{
             const room = socket.handshake.query.room;
             const chatSocket = socket.id;
 
-            if (!(await Room.findOne({name:room}))){
-                let newRoom = new Room ({name:room});
-                newRoom.save();
-            };
-            
-            const roomId = (await Room.findOne({name:room},'_id').exec());
+            const roomId = (await Room.findOne({name:room},'_id').exec()._str);
+            // let thisChatUserModel = mongoose.model(token,userSchema);
+            // let anotherUser = new thisChatUserModel({name,token,chatSocket, room:roomId});
+            // anotherUser.save();
+
             let user = new User({name,token,chatSocket, room:roomId});
             if (!(await User.findOneAndUpdate({token},{name,token,chatSocket,room:roomId}).exec())){
                 user.save();
             };
            
             socket.join(room);
+            let allUsers = await User.find({room:roomId}).exec();
             let welcomeMessage = {users:(await User.find({room:roomId}).exec()), messages:(await Message.find({room:roomId}).exec())};
             chat.to(socket.id).emit('welcome',welcomeMessage);
 
@@ -79,7 +63,6 @@ app.get("/api",async (req,res)=>{
                 await User.findOneAndRemove({chatSocket:socket.id});
                 socket.nickname = name;
                 socket.to(room).emit('leave',socket.nickname);
-                await Message.createIndexes();
             });
     }
 
@@ -119,22 +102,6 @@ app.get("/api",async (req,res)=>{
 
 
 
-function createSocketInterface(namespace,routes){
-    let wsInterface = io.of(namespace);
-    return wsInterface;
-}
-
-
-class ChatRoom{
-    constructor(){
-        this.chatHistory = [];
-    }
-    getUsers(){};
-    onJoin(){};
-    onLeave(){};
-    terminate(){};
-}
-
 class ChatServer extends EventEmitter{
     constructor(){
         super();
@@ -142,8 +109,9 @@ class ChatServer extends EventEmitter{
         this.signalling = signalling;
         this.rooms = {};
     }
-    start(){
+    async start(){
         http.listen(httpSettings.port,()=>{});
+        // await mongoDb.connect();
     }
     createChatRoom(){}
     onNewUser(){}

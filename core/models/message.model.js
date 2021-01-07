@@ -26,6 +26,5 @@ messageSchema.pre('save', async function save(next) {
         return next(error);
     }
 });
-const Message = mongoose.model('Message', messageSchema)
-
-module.exports = Message
+exports.chatSchema = messageSchema;
+exports.Message = mongoose.model('Message', messageSchema)

@@ -9,7 +9,8 @@ module.exports = {
         path: "/chat"
     },
     mongodbSettings:{
-        path: 'mongodb://localhost:27018/test',
+        URI: 'mongodb://localhost:27018/',
+        dbName: 'fstest',
         options:{
             useNewUrlParser: true,
             useFindAndModify: false

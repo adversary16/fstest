@@ -1,11 +1,13 @@
-const { Db } = require('mongodb');
 const mongoose = require ('mongoose');
+const Log = require('../models/log.model');
 const { mongodbSettings } = require('./vars');
 
-mongoose.connect(mongodbSettings.path, mongodbSettings.options);
 
+mongoose.connect(mongodbSettings.URI+mongodbSettings.dbName, mongodbSettings.options);
 const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.on('open', ()=>{console.log('open')});
+
+
+let log = new Log({service:"test"});
+log.save();
 
 module.exports = db

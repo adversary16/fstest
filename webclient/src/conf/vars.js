@@ -1,11 +1,20 @@
 const appSettings = {
     signalling:{
-      path:"/signalling",
+      path:':3081/signalling',
       room: (()=>{
         let x = new URLSearchParams(window.location.search);
         return (x.get('room'))
       })(),
       marker:"rtc",
+      transports: ['websocket']
+    },
+    chat:{
+      path:':3081/chat',
+      room: (()=>{
+        let x = new URLSearchParams(window.location.search);
+        return (x.get('room'))
+      })(),
+      marker:"chat",
       transports: ['websocket']
     },
     socketBasePath:"/socket.io",
@@ -17,6 +26,18 @@ const appSettings = {
           "height":160
         }
       }
+    },
+    navigation:{
+      minRoomNameLength: 3,
+      minUserNameLength: 4,
+      logonPageDefaultPath: "login",
+    },
+    api:{
+      basePath: "/api",
+      auth: "/auth",
+      method: "POST",
+      headers: {'Content-Type': 'application/json'},
+      cookieLabel: 'fstest'
     }
   }
 

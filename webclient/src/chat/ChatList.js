@@ -12,12 +12,12 @@ const useStyles = makeStyles({
         display: "flex",
         flexDirection: "column-reverse",
         height: "100%",
-        width:"80%",
-        minWidth: 480,
+        width:"90%",
+        minWidth: 520,
         maxWidth: 960,
         minHeight: 480,
         maxHeight: 720,
-        overflowY: "scroll"
+        overflowY: "scroll",
     },
     header: {
         backgroundColor:"teal"

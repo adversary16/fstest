@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { Button, TextField } from '@material-ui/core'
+import CAPTIONS from '../captions'
 
 class ChatInput extends Component {
   static propTypes = {
@@ -12,7 +13,7 @@ class ChatInput extends Component {
 
   render() {
     return (
-      <form
+      <form id="input_form"
         action="."
         onSubmit={e => {
           e.preventDefault()
@@ -20,13 +21,13 @@ class ChatInput extends Component {
           this.setState({ message: '' })
         }}
       >
-        <TextField variant="outlined"
+        <TextField className="input_text" variant="outlined"
           type="text"
           placeholder={'Enter message...'}
           value={this.state.message}
           onChange={e => this.setState({ message: e.target.value })}
         />
-        <Button variant="contained" type="submit"> SEND </Button>
+        <Button className="input_submit" variant="contained" type="submit"> { CAPTIONS.CHAT.SUBMIT_BUTTON } </Button>
       </form>
     )
   }

@@ -2,10 +2,13 @@ const mongoose  = require("mongoose");
 
 const roomSchema = new mongoose.Schema({
     name: { type: String, unique: true },
-    chat: String,
-    users: String
-});
+    chat: { 
+        type: mongoose.Schema.Types.ObjectId,
+    },
+    users: {
+        type: mongoose.Schema.Types.ObjectId,
+    }
+},{ autoCreate: true });
 
-const Room = mongoose.model('Room', roomSchema)
-
-module.exports = Room
+exports.roomSchema = roomSchema
+exports.Room = mongoose.model('Room', roomSchema);
