@@ -1,4 +1,4 @@
-const User = require("../models/user.model");
+const  { User } = require("../models/user.model");
 const generateUserToken = require("./generateUserToken");
 
 function addUserToRoom(user,room){

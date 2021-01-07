@@ -4,11 +4,11 @@ import openSocket from 'socket.io-client';
 import ChatList from './ChatList';
 import UserList from './UserList';
 import { Grid, makeStyles, Paper, Toolbar } from '@material-ui/core';
-import LocalVideo from './LocalVideo';
-import uuidv4 from './utils/uuid';
+import VideoChat from '../videochat';
+import uuidv4 from '../utils/uuid';
+import CAPTIONS from "../captions";
+import appSettings from '../conf/vars';
 
-
-// const parsedCookie = cookies.get('token');
 
 const chatURL = ':3081/chat';
 const signallingURL = ':3081/signalling';
@@ -31,9 +31,6 @@ class Chat extends Component {
       userListTab:{
         width: '30%',
         minWidth:240
-      },
-      videoChatTab:{
-        width: 200
       }
     });
     return styles;
@@ -42,13 +39,8 @@ class Chat extends Component {
 
 
 
-  getOwnUserName = () => {
-    // let ownName = cookies.get('token');
-    // this.setState(state=>{state.name=ownName.user});
-  }
-
-  chatSocket = openSocket(chatURL,{transports:['websocket'],query:{room:this.props.chatId,user:this.props.userId,token:this.props.token},forceNew:true});
-  signallingSocket = openSocket(signallingURL,{transports:['websocket'],query:{"room":this.props.chatId,"user":this.props.userId,token:this.props.token},forceNew:true});
+  chatSocket = openSocket(appSettings.chat.path,{transports:['websocket'],query:{room:this.props.chatId,user:this.props.userId,token:this.props.token},forceNew:true});
+  signallingSocket = openSocket(appSettings.signalling.path,{transports:['websocket'],query:{"room":this.props.chatId,"user":this.props.userId,token:this.props.token},forceNew:true});
   componentDidMount() {
     this.chatSocket.on('connect',() => {
       console.log(this.props.userId);
@@ -119,17 +111,14 @@ class Chat extends Component {
   render() {
     return (
     <Grid container className="main" justify="center" padding={20} key={ uuidv4 }>
-        <Paper padding="20" className="test">
-        <Toolbar>
-        Users
-    </Toolbar>
-      <UserList 
-            users = { this.state.users }
-            me = {this.props.userId}
-      />
-      </Paper>
+      <Grid container id="videochat_wrapper" justify="center">
+      <Paper id="videochat">
+          <VideoChat signallingSocket = { this.signallingSocket } name = {this.props.userId} key={uuidv4}/>
+        </Paper>
+      </Grid>
+      <Grid container id="chat_wrapper" justify="center">
       <Paper>
-      <Toolbar>Messages</Toolbar>
+      <Toolbar>{ CAPTIONS.CHAT.CHAT_TAB }</Toolbar>
         <ChatList
             messages = { this.state.messages }
             name = { this.props.userId }
@@ -139,12 +128,16 @@ class Chat extends Component {
           onSubmitMessage={messageString => this.submitMessage(messageString)}
         />
         </Paper>
-        <Paper className={ this.state.classes.videoChatTab }>
+        <Paper padding="20" className="user_list">
         <Toolbar>
-          VideoChat
-         </Toolbar>
-          <LocalVideo signallingSocket = { this.signallingSocket } name = {this.props.userId} key={uuidv4}/>
-        </Paper>
+       { CAPTIONS.CHAT.USERS_TAB }
+    </Toolbar>
+      <UserList 
+            users = { this.state.users }
+            me = {this.props.userId}
+      />
+      </Paper>
+        </Grid>
         </Grid>
     )
   }

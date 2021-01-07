@@ -17,10 +17,19 @@ const useStyles = makeStyles({
   },
   ownMessage:{
     backgroundColor: "#90ee90",
-    marginTop: 2
+    marginTop: 2,
+    borderRadius: 8,
+    width: '60%',
+    minWidth: 480*0.7,
+    marginLeft: '30%'
   },
   othersMessage:{
-
+    backgroundColor: "#EEE",
+    marginTop: 2,
+    borderRadius: 8,
+    width: '60%',
+    minWidth: 480*0.7,
+    marginRight: '30%'
   }
 })
 

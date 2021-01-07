@@ -1,21 +1,31 @@
-import { Button, Card, CardActions, CardMedia, Container, makeStyles, Toolbar } from "@material-ui/core";
+import { Button, Card, CardActions, CardMedia, Container, makeStyles, Toolbar, Typography, Paper } from "@material-ui/core";
 import { Component } from "react";
-import appSettings from "./conf/vars";
-import uuidv4 from "./utils/uuid";
+import CAPTIONS from "../captions";
+import appSettings from "../conf/vars";
+import uuidv4 from "../utils/uuid";
 import RemoteVideoCard  from './RemoteVideoCard'
+
+///icons
+import MicIcon from '@material-ui/icons/Mic';
+import MicOffIcon from '@material-ui/icons/MicOff';
+import VideocamIcon from '@material-ui/icons/Videocam';
+import VideocamOffIcon from '@material-ui/icons/VideocamOff';
+import ScreenShareIcon from '@material-ui/icons/ScreenShare';
 
 
 
 let RTCconnections = {};
 
-class LocalVideo extends Component{
+class VideoChat extends Component{
     constructor(props){
         super(props);
         this.state={
             classes: this.useStyles(),
             localstream: new Promise (async(resolve)=>{navigator.mediaDevices.getUserMedia({audio: true, video: appSettings.webrtc.constraints.video}).then((stream)=>{resolve(stream)})}),
             remotestreams: {},
-            isScreensharingOn: false 
+            isScreensharingOn: false,
+            isCameraMuted: false,
+            isMicMuted: false 
         
         }
         this.muteCamera = this.muteCamera.bind(this);
@@ -39,6 +49,7 @@ class LocalVideo extends Component{
     async muteCamera(){
         (await this.state.localstream).getVideoTracks().forEach((track)=>{
             track.enabled=!track.enabled;
+            this.setState(state=>(state.isCameraMuted=!state.isCameraMuted));
             console.log(track);
         })
     }
@@ -46,6 +57,7 @@ class LocalVideo extends Component{
         (await this.state.localstream).getTracks().forEach((track)=>{
             if (track.kind==='audio'){
                 track.enabled=!track.enabled;
+                this.setState(state=>(state.isMicMuted=!state.isMicMuted));
             }
         })
     }
@@ -142,7 +154,6 @@ class LocalVideo extends Component{
     async handleAnswer(answer){
         let to = answer.re;
         try {await RTCconnections[to].setRemoteDescription(answer.payload)} catch (e) {console.log("error"+e)};
-        // this.respondWithIce(answer, true);
     }
 
     async handleIceCandidates(ice){
@@ -159,7 +170,6 @@ class LocalVideo extends Component{
 
     async removeDisconnectedUser(signallingSocketId){
         let to = signallingSocketId;
-        // RTCconnections[to].close();
         delete RTCconnections[to];
         let prevState = this.state.remotestreams;
         delete prevState[to];
@@ -186,19 +196,24 @@ class LocalVideo extends Component{
     render(){
         return(
         <Container>
-            <Toolbar> {this.props.name} </Toolbar>
-        <Card key = { uuidv4+"x" }>
+                <Paper id="video_own_controls" className="MuiCard-root" justify="center">
+                    <Button onClick={ this.muteCamera }> { this.state.isCameraMuted ? <VideocamOffIcon color="action"/>:  <VideocamIcon color="action"/> } </Button>
+                    <Button onClick={ this.muteMic }> { this.state.isMicMuted ? <MicOffIcon color="action"/>:  <MicIcon color="action"/> } </Button>
+                    <Button onClick={ this.toggleScreensharing }><ScreenShareIcon color="action"/></Button>
+                </Paper>
+        <Card key = { uuidv4+"x" } className="videoBox">
                 <CardMedia
                     component="video"
                     autoPlay={ true }
                     muted={ true }
                     id="localvid"
-                    className={this.useStyles().localVideo}
+                    width = { appSettings.webrtc.constraints.video.width*0.8 }
+                    height = { appSettings.webrtc.constraints.video.height*0.8 }
+
                 />
-            <CardActions>
-                <Button onClick={ this.muteCamera }>MUTE CAM</Button>
-                <Button onClick={ this.muteMic }>MUTE MIC</Button>
-                <Button onClick={ this.toggleScreensharing }>SCREEN</Button>
+            <CardActions className="video_extras">
+                <Typography className="video_title">{this.props.name} </Typography>
+
             </CardActions>
         </Card>
         { Object.keys(this.state.remotestreams).map((to)=>
@@ -209,4 +224,4 @@ class LocalVideo extends Component{
     )}
 };
 
-export default LocalVideo
+export default VideoChat

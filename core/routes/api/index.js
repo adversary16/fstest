@@ -1,17 +1,16 @@
-const { EventEmitter } = require("events");
+const { Router } = require("express");
+const { findOrCreateRoom } = require("../../utils/getRoomByName");
+const { isUsernameEligible } = require("../../utils/isUsernameEligible");
+const { createNewUser } = require("../../utils/createNewUser");
 
-class ApiRouter extends EventEmitter{
-    
-    addRoute (){
 
-    }
-    useRoute(query,data,next){
-        this[query](data);
-    }
-    logon(query){
-        console.log("logon requested");
-    }
+const router = new Router();
 
+router.post('/auth', [ findOrCreateRoom, isUsernameEligible, createNewUser, respond] );
+
+function respond(req,res){
+    res.send(res.locals.result);
+    console.log(res.locals.result);
 }
 
-module.exports=ApiRouter
+module.exports = router;

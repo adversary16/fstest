@@ -1,4 +1,3 @@
-const { ObjectId } = require("bson");
 const mongoose  = require("mongoose");
 
 const userSchema = new mongoose.Schema({
@@ -6,12 +5,7 @@ const userSchema = new mongoose.Schema({
     token: String,
     chatSocket: String,
     signallingSocket: String,
-    room: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Room'
-    }
+    room: String
 })
-
-const User = mongoose.model('User', userSchema)
-
-module.exports = User
+exports.userSchema = userSchema;
+exports.User = mongoose.model('User', userSchema)

@@ -1,83 +1,49 @@
 import { Button, Grid, Paper, TextField } from '@material-ui/core';
 import React, { Component } from 'react';
-import Cookies from 'universal-cookie';
+import CAPTIONS from "./captions";
+import validateInput from './chat/validateInput';
+import appSettings from './conf/vars';
+import authorizeUser from './utils/authorizeUser';
+import removeNonAlphanumeric from './utils/removeNonAlphanumeric';
 
 const {  Toolbar, makeStyles } = require("@material-ui/core");
 
-// function HandleCookie(val){
-//     console.log('cookie access');
-
-//     console.log(val);
-//     setCookie("user",val,{
-//         path: "/"
-//     })
-// }
-// }
-
-// const useStyles = makeStyles({
-//     logonBoxWrapper:{
-//         width:'100%',
-//         display: 'flex'
-//     },
-//     logonBox: {
-//         width: 512,
-//         height: 320
-//     }
-// })
-
-const cookies = new Cookies();
-
-async function didLogin(query){
-    // let username = e.value;
-
-    let response = await fetch("/api?action=logon&user="+query.user+"&room="+query.room);
-    if (response.ok){
-        let parsedResponse = await response.json();
-        if (parsedResponse.success){
-        cookies.set('token', {user:parsedResponse.user,token:parsedResponse.token,room:parsedResponse.room}, {path: "/"+query.room});
-        window.location.reload();
-        } else {
-            cookies.remove('token');
-            alert ('Looks like the name is taken');
-        }
-    }
-    if (cookies.get('token')){console.log(false)}
-    return true;
-}
 
 class Logon extends Component {
-    state={
-        classes: this.useStyles(),
+    constructor(props){
+        super(props);
+        this.reloadAfterLogon = this.reloadAfterLogon.bind(this);
     }
-    chatId = this.props.chatId;
+    chatId = this.props.path;
 
-    useStyles(){
-        return makeStyles({
-            logonBoxWrapper:{
-                width:'100%',
-                display: 'flex'
-            },
-            logonBox: {
-                width: 512,
-                height: 320
-            }
-        })
+    componentDidMount(){
+    }
+
+    reloadAfterLogon(){
+        document.location.href='/'+this.chatId;
     }
 
     render() {
         return(
-    <Grid container justify="center" className={this.state.classes.logonBoxWrapper}>
-        <Paper className={this.state.classes.logonBox} justify="center">
-            <Toolbar justify="center">
-                PLEASE ENTER YOUR NAME
+    <Grid container justify="center" className="logon_wrapper_grid">
+        <Paper className="logon_wrapper" justify="center">
+            <Toolbar justify="center" id="logon_caption">
+                { CAPTIONS.LOGON.FORM_LABEL }
             </Toolbar>
-            <form onSubmit={e => {
+            <form id ="logon_form" onSubmit={async (e) => {
           e.preventDefault();
-          console.log(e.target[0].value);
-          didLogin({user:e.target[0].value,room:this.chatId});
+          if (e.target.length>2){
+              let inputRoom = removeNonAlphanumeric(e.target[2].value);
+              
+            this.chatId = (inputRoom.length>=appSettings.navigation.minRoomNameLength) ? inputRoom : this.chatId;
+          }
+        await authorizeUser({name:e.target[0].value,room:this.chatId},this.reloadAfterLogon);
         }}>
-            <TextField label="Login" variant="outlined" name="logon" id="logon"/>
-            <Button type="submit" variant="outlined">Get</Button>
+            <TextField  inputProps={{ maxLength: 20, minLength: appSettings.navigation.minUserNameLength }} onInput = { validateInput} label={"Username: min "+appSettings.navigation.minUserNameLength+" characters"} variant="outlined" name="logon" id="logon_username"/>
+            { ((!this.chatId)||(this.chatId.length< appSettings.navigation.minRoomNameLength)) ?
+            <TextField inputProps={{ minLength: appSettings.navigation.minRoomNameLength }} label={ "Room: min "+appSettings.navigation.minRoomNameLength+" characters"} variant="outlined" name="room" id="logon_chatroom" /> 
+   : '' }
+            <Button type="submit" variant="outlined" id="logon_submit"> { CAPTIONS.LOGON.SUBMIT_BUTTON } </Button>
             </form>
         </Paper>
     </Grid>)}
