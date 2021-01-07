@@ -17,8 +17,6 @@ class RemoteVideoCard extends Component{
                     width = { appSettings.webrtc.constraints.video.width*0.8 }
                     height = { appSettings.webrtc.constraints.video.height*0.8 }
                     id={ this.props.to }
-                    // ref = { remotevid=> {this.videoref = remotevid; this.videoref.srcObject = this.state.remotestreams[to]}}
-                    // className={this.useStyles().localVideo}
                 />
             <CardActions className="video_extras">
             <Typography className="video_title" >{ this.props.srcObject.name } </Typography> 

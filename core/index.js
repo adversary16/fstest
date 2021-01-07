@@ -9,11 +9,8 @@ const mongoDb = require ('./config/mongodb');
 const mongoose  = require("mongoose");
 
 const { httpSettings, chatSettings, signallingSettings } = require('./config/vars');
-const addUserToRoom = require('./utils/addUserToRoom');
-const isUserAlreadyInRoom = require('./utils/isUserAlreadyInRoom');
 const { Room } = require('./models/room.model');
 const { Message } = require('./models/message.model');
-const Log = require('./models/log.model');
 const { userSchema, User } = require('./models/user.model');
 const io = SocketIo(http, {transports: ['websocket']})
 
