@@ -3,9 +3,6 @@ import { Component } from "react";
 import appSettings from "../conf/vars";
 
 class RemoteVideoCard extends Component{
-    constructor(props){
-        super(props)
-    }
     componentDidMount(){
         let remotevid = document.getElementById(this.props.to);
         remotevid.srcObject = this.props.srcObject.stream;

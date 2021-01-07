@@ -9,10 +9,6 @@ import uuidv4 from '../utils/uuid';
 import CAPTIONS from "../captions";
 import appSettings from '../conf/vars';
 
-
-const chatURL = ':3081/chat';
-const signallingURL = ':3081/signalling';
-
 class Chat extends Component {
     // parsedCookie = JSON.parse(cookies.get('token'));
     constructor (props){

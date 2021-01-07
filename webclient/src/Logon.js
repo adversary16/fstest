@@ -6,7 +6,7 @@ import appSettings from './conf/vars';
 import authorizeUser from './utils/authorizeUser';
 import removeNonAlphanumeric from './utils/removeNonAlphanumeric';
 
-const {  Toolbar, makeStyles } = require("@material-ui/core");
+const {  Toolbar } = require("@material-ui/core");
 
 
 class Logon extends Component {

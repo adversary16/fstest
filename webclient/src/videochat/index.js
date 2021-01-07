@@ -1,6 +1,5 @@
-import { Button, Card, CardActions, CardMedia, Container, makeStyles, Toolbar, Typography, Paper } from "@material-ui/core";
+import { Button, Card, CardActions, CardMedia, Container, makeStyles, Typography, Paper } from "@material-ui/core";
 import { Component } from "react";
-import CAPTIONS from "../captions";
 import appSettings from "../conf/vars";
 import uuidv4 from "../utils/uuid";
 import RemoteVideoCard  from './RemoteVideoCard'

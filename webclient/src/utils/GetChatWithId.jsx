@@ -1,4 +1,3 @@
-import { useParams } from "react-router";
 import Cookies from "universal-cookie";
 import Chat from "../chat";
 import appSettings from "../conf/vars";
