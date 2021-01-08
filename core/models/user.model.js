@@ -5,7 +5,10 @@ const userSchema = new mongoose.Schema({
     token: String,
     chatSocket: String,
     signallingSocket: String,
-    room: String
+    room: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Room'
+    }
 })
 exports.userSchema = userSchema;
 exports.User = mongoose.model('User', userSchema)

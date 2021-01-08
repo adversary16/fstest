@@ -14,7 +14,6 @@ const { Message } = require('./models/message.model');
 const { userSchema, User } = require('./models/user.model');
 const io = SocketIo(http, {transports: ['websocket']})
 
-app.use ('/js',express.static(__dirname+"/webclient/js"));
 app.use(express.json());
 app.use('/api',apiRoutes);
 
@@ -28,8 +27,8 @@ app.use('/api',apiRoutes);
             const token = socket.handshake.query.token;
             const room = socket.handshake.query.room;
             const chatSocket = socket.id;
-
-            const roomId = (await Room.findOne({name:room},'_id').exec()._str);
+            let user = {name, token, chatSocket};
+            const roomId = (await Room.findOne({name:room},'_id').exec());
             await User.findOneAndUpdate({token:token},{$set:{chatSocket:chatSocket}});           
             socket.join(room);
 

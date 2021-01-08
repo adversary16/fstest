@@ -1,3 +1,4 @@
+const { v4 } = require("uuid");
 const { uuid } = require("uuidv4");
 const { User } = require("../models/user.model");
 
@@ -9,12 +10,7 @@ exports.createNewUser = async (user,res,next) => {
 
     if (isMiddleware && !res.locals.result.success){ next()};
 
-    if (isMiddleware && res.locals.result.success && (!!user.body.token)){
-            result = {token: user.body.token};
-            success = true;
-
-    } else {
-        let token = uuid();
+        let token = v4();
         let newUser = new User({name:user.body.name,room:res.locals.result.roomid,token:token});
         try {
             await newUser.save();
@@ -23,7 +19,6 @@ exports.createNewUser = async (user,res,next) => {
             console.log("new user has been generated");
             } catch (e){ result = { error:e };}
 
-    }
 
     if(isMiddleware){
         result.name = user.body.name;
