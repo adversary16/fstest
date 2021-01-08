@@ -11,7 +11,7 @@ module.exports = {
         path: process.env.CHAT_SOCKET_NS || "/chat"
     },
     mongodbSettings:{
-        URI: process.env.MONGO_URI || 'mongodb://localhost:27017/',
+        URI: process.env.MONGO_URI || 'mongodb://localhost:27018/',
         dbName: process.env.DBNAME || 'fstest',
         options:{
             useNewUrlParser: true,
