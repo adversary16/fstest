@@ -10,5 +10,13 @@ const userSchema = new mongoose.Schema({
         ref: 'Room'
     }
 })
+
+userSchema.methods.toDto = function (){
+    return ({
+        name: String,
+        chatSocket: String,
+        signallingSocket: string
+    })
+}
 exports.userSchema = userSchema;
 exports.User = mongoose.model('User', userSchema)

@@ -12,6 +12,7 @@ const { httpSettings, chatSettings, signallingSettings } = require('./config/var
 const { Room } = require('./models/room.model');
 const { Message } = require('./models/message.model');
 const { userSchema, User } = require('./models/user.model');
+const { updateUserByToken } = require('./utils/updateUserByToken');
 const io = SocketIo(http, {transports: ['websocket']})
 
 app.use(express.json());
@@ -20,39 +21,66 @@ app.use('/api',apiRoutes);
 
 
     const chat = io.of( chatSettings.path );
-    chat.on('connection', (socket)=>{handleChatConnection(socket)});
 
-    async function handleChatConnection(socket){
-            const name = socket.handshake.query.user;
-            const token = socket.handshake.query.token;
-            const room = socket.handshake.query.room;
-            const chatSocket = socket.id;
-            let user = {name, token, chatSocket};
-            const roomId = (await Room.findOne({name:room},'_id').exec());
-            await User.findOneAndUpdate({token:token},{$set:{chatSocket:chatSocket}});           
-            socket.join(room);
-
-            let welcomeMessage = {users:(await User.find({room:roomId}).exec()), messages:(await Message.find({room:roomId}).exec())};
-            chat.to(socket.id).emit('welcome',welcomeMessage);
-
-            socket.to(room).emit('join',user);
-
-            socket.toAll = (marker,message) => {
-                chat.to(room).emit(marker,message);
-            }
-            socket.on('chat', async (msg)=>{
-                msg = {room:roomId, ...msg};
-                let message = new Message(msg);
-                message.save();
-                socket.toAll('chat',message);
-            });
-            socket.on('disconnect',async ()=>{
-                console.log(name+" is leaving");
-                await User.findOneAndRemove({chatSocket:socket.id});
-                socket.nickname = name;
-                socket.to(room).emit('leave',socket.nickname);
-            });
+    function getIo(){
+        return io;
     }
+    io.of( chatSettings.path ).use(chatSocket);
+
+
+    async function chatSocket(socket,next){
+        const namespace = socket.nsp.name;
+        const userToken = socket.handshake.query.token;
+        const socketUser = await updateUserByToken(userToken,"chatSocket",socket.id);
+
+        initializeSocketInstance(socket,socketUser);
+        storeAndForward.bind(socket);
+        terminateUser.bind(socket);
+        welcomeNewUser.call(socket);
+        socket.on('chat',storeAndForward);
+        socket.on('disconnect',terminateUser);
+        next();
+    };
+
+    async function welcomeNewUser(){
+        console.log(this.currentRoom);
+        // socket.to(socket.currentRoom).emit('join','hello');
+    }
+
+    async function getRoomContents(room){
+        let room = await Room.findOne({name:room}).exec();
+        let users = await User.find({room: room._id}).exec();
+        let messages = await Message.find({room: room._id}).exec();
+
+    }
+
+    async function storeAndForward(message){
+        let messageToStore = {room:this.currentRoomId, ...message};
+        const msg = new Message(messageToStore);
+        await msg.save();
+        this.toChat(msg.toDto());
+    }
+
+    async function terminateUser(socket){
+        this.toChat(socket.id,'leave');
+        await User.findOneAndRemove({token:socket.nickname});
+    }
+
+    async function initializeSocketInstance(socket,user){
+
+        socket.toChat = (message, markerOptional) => {
+            let marker = markerOptional || chatSettings.defaultMessageMarker;
+            getIo().of(socket.nsp.name).to(user.room.name).emit(marker,message);
+            console.log(socket.nsp.name);
+        };
+
+        socket.currentRoom = user.room.name;
+        socket.currentRoomId = user.room._id;
+        socket.nickname = user.token;
+        return socket;
+    }
+
+
 
     const signalling = io.of(signallingSettings.path);
     signalling.on('connection',(socket)=>{handleSignallingConnection(socket)});
