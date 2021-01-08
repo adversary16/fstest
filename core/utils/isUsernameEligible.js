@@ -13,9 +13,9 @@ exports.isUsernameEligible = async (user,res,next) => {
 
     let userToVerify = isMiddleware ? {name: user.body.name, token: user.body.token, room: res.locals.result.roomid} : {name: user.name, token: user.token, room: user.room};
     let userCheckup = (await User.findOne({name:userToVerify.name, room: userToVerify.room}).exec());
-    let isUsernameEligible = (!!userCheckup) ? (userCheckup.token == userToVerify.token) : true; 
+    let isUsernameEligible = (!!userCheckup) ? (userCheckup.token === userToVerify.token) : true; 
     if(isMiddleware){
-        res.locals.result.success = res.locals.result.success &&isUsernameEligible;
+        res.locals.result.success = res.locals.result.success && isUsernameEligible;
         next();
     }
     else {

@@ -48,7 +48,7 @@ app.use('/api',apiRoutes);
             });
             socket.on('disconnect',async ()=>{
                 console.log(name+" is leaving");
-                // await User.findOneAndRemove({chatSocket:socket.id});
+                await User.findOneAndRemove({chatSocket:socket.id});
                 socket.nickname = name;
                 socket.to(room).emit('leave',socket.nickname);
             });
