@@ -26,6 +26,13 @@ messageSchema.pre('save', async function save(next) {
     }
 });
 
+messageSchema.post('find', async function (doc,next){
+    doc.map((item,index)=>{
+        doc[index]=item.toDto();
+    });
+    next();
+})
+
 messageSchema.methods.toDto = function (){
     return {
         name: this.name,

@@ -36,7 +36,7 @@ class Chat extends Component {
 
 
   chatSocket = openSocket(appSettings.chat.path,{transports:['websocket'],query:{room:this.props.chatId,user:this.props.userId,token:this.props.token},forceNew:true});
-  signallingSocket = openSocket(appSettings.signalling.path,{transports:['websocket'],query:{"room":this.props.chatId,"user":this.props.userId,token:this.props.token},forceNew:true});
+ 
   componentDidMount() {
     this.chatSocket.on('connect',() => {
       console.log(this.props.userId);
@@ -64,7 +64,7 @@ class Chat extends Component {
         for (let user in evt.users){
             this.addUser(evt.users[user])
         };
-        // evt.users.map((user)=>{this.updateUsers(user)});
+
         evt.messages.map((msg) => {this.addMessage(msg); return true });
     })
 
@@ -109,7 +109,7 @@ class Chat extends Component {
     <Grid container className="main" justify="center" padding={20} key={ uuidv4 }>
       <Grid container id="videochat_wrapper" justify="center">
       <Paper id="videochat">
-          <VideoChat signallingSocket = { this.signallingSocket } name = {this.props.userId} key={uuidv4}/>
+          <VideoChat token = {this.props.token} users={ this.state.users } room = { this.props.chatId } key={uuidv4}/>
         </Paper>
       </Grid>
       <Grid container id="chat_wrapper" justify="center">

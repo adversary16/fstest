@@ -10,7 +10,6 @@ exports.findOrCreateRoom = async (room, res, next) =>{
     let isMiddleware = (!!res); // if res is present, method assumes it is being used as a middleware 
     let roomName = isMiddleware ? room.body.room : roomName; 
     let roomReference = await this.getRoomByName(roomName);
-    console.log(room.body);
     if (!roomReference){
         roomReference = new Room({name:roomName});
         roomReference.save();

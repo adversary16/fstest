@@ -1,6 +1,7 @@
 import Cookies from "universal-cookie";
 import CAPTIONS from "../captions";
 import appSettings from "../conf/vars";
+import generatePostRequest from "./generatePost";
 
 const cookies = new Cookies();
 
@@ -14,19 +15,9 @@ async function authorizeUser(query,cb){
     if (authToken) { authQuery = {...{token:authToken}, ...authQuery }};
     let authUrl = appSettings.api.basePath+appSettings.api.auth;
 
-    let authParams = {
-        method: appSettings.api.method,
-        body: JSON.stringify(authQuery),
-        headers: appSettings.api.headers
-    }
-    console.log(authParams);
-    console.log(query);
-    const authRequest = await fetch (authUrl, {
-        method: appSettings.api.method,
-        body: JSON.stringify(authQuery),
-        headers: appSettings.api.headers
-    });
-    console.log(authRequest);
+    let authParams = generatePostRequest(authQuery); 
+    const authRequest = await fetch (authUrl, authParams);
+
     let authResponse = await authRequest.json ();
     if (authResponse.success){
         console.log(authResponse);

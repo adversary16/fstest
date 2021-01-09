@@ -35,6 +35,7 @@ const appSettings = {
     api:{
       basePath: "/api",
       auth: "/auth",
+      validation: "/validate",
       method: "POST",
       headers: {'Content-Type': 'application/json'},
       cookieLabel: 'fstest'
