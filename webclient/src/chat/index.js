@@ -38,12 +38,7 @@ class Chat extends Component {
   chatSocket = openSocket(appSettings.chat.path,{transports:['websocket'],query:{room:this.props.chatId,user:this.props.userId,token:this.props.token},forceNew:true});
  
   componentDidMount() {
-    this.chatSocket.on('connect',() => {
-      console.log(this.props.userId);
-      // this.getOwnUserName();
-
-      this.chatSocket.emit('hello',{user: this.props.userId, token: this.state.token})
-    });
+    this.chatSocket.on('connect',() => {});
 
     this.chatSocket.on('chat',(evt) => {
         const message = evt;
@@ -109,7 +104,7 @@ class Chat extends Component {
     <Grid container className="main" justify="center" padding={20} key={ uuidv4 }>
       <Grid container id="videochat_wrapper" justify="center">
       <Paper id="videochat">
-          <VideoChat token = {this.props.token} users={ this.state.users } room = { this.props.chatId } key={uuidv4}/>
+          <VideoChat token={ this.props.token } users={ this.state.users } name={ this.props.userId} room = { this.props.chatId } key={uuidv4}/>
         </Paper>
       </Grid>
       <Grid container id="chat_wrapper" justify="center">

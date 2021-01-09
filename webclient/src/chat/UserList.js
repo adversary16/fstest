@@ -9,8 +9,8 @@ export default ({ users, me }) => (
 <List>
 { (Object.keys(users).map((user) =>
   <UserEntry
-    token = { users[user].token }
-    key = { users[user].token }
+    token = { users[user].socketId }
+    key = { users[user].socketId }
     name = { users[user].name }
     isMe = { isMe(me, users[user].name) }
   />

@@ -12,7 +12,7 @@ module.exports = {
         defaultMessageMarker: "chat"
     },
     mongodbSettings:{
-        URI: process.env.MONGO_URI || 'mongodb://localhost:27018/',
+        URI: process.env.MONGO_URI || 'mongodb://localhost:27017/',
         dbName: process.env.DBNAME || 'fstest',
         options:{
             useNewUrlParser: true,

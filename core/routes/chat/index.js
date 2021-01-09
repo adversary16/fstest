@@ -30,7 +30,7 @@ async function welcomeNewUser(){
 }
 
 async function getRoomContents(roomId){
-    let users = await User.find({room: roomId._id}).exec();
+    let users = await User.find({room: roomId._id,isActive:true}).exec();
     let messages = await Message.find({room: roomId._id});
     return {users,messages};
 
@@ -44,8 +44,8 @@ async function storeAndForward(message){
 }
 
 async function terminateUser(){
+    await User.updateOne({chatSocket:this.id},{$set:{chatSocket:null, isActive: false}});
     this.toChat(this.id,'leave');
-    // await User.findOneAndRemove({chatSocket:this.id});
 }
 
 async function initializeSocketInstance(socket,user){

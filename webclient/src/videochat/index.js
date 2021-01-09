@@ -217,7 +217,7 @@ class VideoChat extends Component{
         </Card>
         { Object.keys(this.state.remotestreams).map((to)=>
             
-        <RemoteVideoCard key = { to } to={to} srcObject={ this.state.remotestreams[to] } />
+        <RemoteVideoCard key = { to } to={ to } srcObject={ this.state.remotestreams[to] } />
         )}
         </Container>
     )}

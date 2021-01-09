@@ -1,9 +1,6 @@
-
-
 const apiRoutes = require('./routes/api');  
 const mongoDb = require ('./config/mongodb');
 const mongoose  = require("mongoose");
-
 const { httpSettings, chatSettings, signallingSettings } = require('./config/vars');
 const { Room } = require('./models/room.model');
 const { chatSocket } = require('./routes/chat');

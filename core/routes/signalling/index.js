@@ -18,7 +18,7 @@ async function signallingSocket(socket,next){
     welcomeNewUser.call(socket);
     handleOffer.bind(socket);
     socket.on('offer',handleOffer);
-    socket.on('answer',(msg)=>{socket.to(msg.to).emit('answer',msg); console.log(msg)});
+    socket.on('answer',(msg)=>{socket.to(msg.to).emit('answer',msg);});
     socket.on('icecandidate',(msg)=>{socket.to(msg.to).emit('icecandidate',msg);});
     socket.on('disconnect',terminateUser);
     next();
@@ -43,11 +43,12 @@ async function welcomeNewUser(){
 }
 
 async function terminateUser(){
+    await User.updateOne({signallingSocket:this.id},{$set:{signallingSocket:null}});
     this.toChat(this.id,'leave');
-    // await User.findOneAndRemove({chatSocket:this.id});
 }
     
 async function handleOffer(msg){
+    msg.name = this.user.name;
     signalling.to(msg.to).emit('offer',msg);
 }
 

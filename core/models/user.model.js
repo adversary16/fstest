@@ -5,6 +5,10 @@ const userSchema = new mongoose.Schema({
     token: String,
     chatSocket: String,
     signallingSocket: String,
+    isActive: {
+        type: Boolean,
+        default: false
+    },
     room: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Room'
@@ -16,6 +20,12 @@ userSchema.post('find', async function (doc,next){
         doc[index]=item.toDto();
     });
     next();
+})
+
+
+userSchema.pre('save',function save(next){
+    this.isActive = (!!this.chatSocket || !! this.signallingSocket);
+    next()
 })
 
 userSchema.methods.toDto = function (){

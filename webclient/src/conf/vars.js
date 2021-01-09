@@ -21,6 +21,7 @@ const appSettings = {
     webrtc:{
       sdpSemantics:"unified-plan",
       constraints:{
+        audio: true,
         video:{
           "width":240,
           "height":160
