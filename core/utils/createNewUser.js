@@ -24,7 +24,7 @@ exports.createNewUser = async (user,res,next) => {
         result.name = user.body.name;
         res.locals.result = {...result, ...res.locals.result};
         res.locals.result.success = res.locals.result.success && success;
-        console.log(res.locals);
+   
         next();
     }
     else {

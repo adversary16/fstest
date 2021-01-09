@@ -3,7 +3,7 @@ import { Component } from "react";
 import appSettings from "../conf/vars";
 import uuidv4 from "../utils/uuid";
 import RemoteVideoCard  from './RemoteVideoCard'
-
+import openSocket from 'socket.io-client';
 ///icons
 import MicIcon from '@material-ui/icons/Mic';
 import MicOffIcon from '@material-ui/icons/MicOff';
@@ -27,6 +27,7 @@ class VideoChat extends Component{
             isMicMuted: false 
         
         }
+        
         this.muteCamera = this.muteCamera.bind(this);
         this.muteMic = this.muteMic.bind(this);
         this.toggleScreensharing = this.toggleScreensharing.bind(this);
@@ -88,11 +89,10 @@ class VideoChat extends Component{
     }
 
   async  componentDidMount(){
-    this.signallingSocket = this.props.signallingSocket;
+    this.signallingSocket = openSocket(appSettings.signalling.path,{transports:['websocket'],query:{token:this.props.token},forceNew:true});
     this.signallingSocket.on('join',async (msg)=>{this.initializeConnection(msg)});
     this.signallingSocket.on('offer', async (msg)=>{this.initializeConnection(msg)});
     this.signallingSocket.on('answer',async (msg)=>{this.handleAnswer(msg)});
-    // this.signallingSocket.on('icerequest',async (msg)=>{this.respondWithIce(msg,false)});
     this.signallingSocket.on('icecandidate',async (msg)=>{this.handleIceCandidates(msg)})
     this.signallingSocket.on('leave', async (msg) => {this.removeDisconnectedUser(msg)});
     this.remoteVideo = document.getElementById('remoteVid');
@@ -101,7 +101,6 @@ class VideoChat extends Component{
     }
 
     async initializeConnection(msg){
-        let cid = msg.token || msg.cid;
         let re = this.signallingSocket.id;
         let to = msg.signallingSocket || msg.re;
         let name = msg.name;
@@ -132,11 +131,11 @@ class VideoChat extends Component{
         });
         connection.addEventListener('icegatheringstatechange',(e)=>{console.log('Ice gathering state changed to '+e.target.iceGatheringState)});
         connection.addEventListener('icecandidate',async (e)=>{
-            await this.signallingSocket.emit(e.type,{cid,re,to,payload:e.candidate});
+            await this.signallingSocket.emit(e.type,{re,to,payload:e.candidate});
         })
 
         let localDescription;
-        if (!!msg.token){
+        if (!msg.payload){
             localDescription = await connection.createOffer();
         } else {
             await connection.setRemoteDescription(msg.payload);
@@ -144,7 +143,8 @@ class VideoChat extends Component{
 
         }
         await connection.setLocalDescription(localDescription);
-        await this.signallingSocket.emit(localDescription.type,{cid,re,to,payload:localDescription});
+        console.log(localDescription.type);
+        await this.signallingSocket.emit(localDescription.type,{re,to,payload:localDescription});
 
         RTCconnections[to] = connection;
         console.log(RTCconnections);

@@ -1,17 +1,27 @@
+
+import { Component } from "react";
 import appSettings from "../conf/vars";
-import checkCookies from "./checkCookies";
+import CheckCookies from "./checkCookies";
 import GetChatWithId from "./GetChatWithId";
 import GetLogonScreenWithId from "./GetLogonScreenWithId";
 import removeNonAlphanumeric from "./removeNonAlphanumeric";
 
-function ValidateAccess(path){
-    let location = removeNonAlphanumeric (path.path);
-    if (checkCookies(location) && (location.length>=appSettings.navigation.minRoomNameLength) && (location!==appSettings.navigation.logonPageDefaultPath)){
-      return GetChatWithId(location)
-    }
-    else{
-      return GetLogonScreenWithId(location);
-    }
+class ValidateAccess extends Component {
+  constructor (props) {
+    super(props);
+    this.state = {isAuthorized:null,itemToRender:null}
   }
+
+  async componentDidMount(){
+    const isAuthorized = await CheckCookies(this.props.location);
+    const itemToRender = (isAuthorized) ? GetChatWithId(this.props.location) : GetLogonScreenWithId(this.props.location);
+    this.setState({isAuthorized,itemToRender});
+    console.log(this.props.location);
+  }
+
+  render(){
+    return this.state.itemToRender
+  }
+}
 
 export default ValidateAccess

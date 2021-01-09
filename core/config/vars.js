@@ -8,7 +8,8 @@ module.exports = {
         path: process.env.SIGNALLING_SOCKET_NS || "/signalling"
     },
     chatSettings:{
-        path: process.env.CHAT_SOCKET_NS || "/chat"
+        path: process.env.CHAT_SOCKET_NS || "/chat",
+        defaultMessageMarker: "chat"
     },
     mongodbSettings:{
         URI: process.env.MONGO_URI || 'mongodb://localhost:27018/',

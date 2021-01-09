@@ -3,6 +3,6 @@ import ValidateAccess from "./ValidateAccess";
 
 function GenerateValidator(){
     let { chatId }  = useParams();
-    return <ValidateAccess path = { chatId }/>
+    return <ValidateAccess location = { chatId }/>
   }
 export default GenerateValidator
