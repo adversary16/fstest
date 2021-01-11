@@ -36,45 +36,24 @@ Smart way:
 A. Install and start mongoDB
 1. docker pull mongo
 2. docker run --rm -d  -p 27017:27017/tcp mongo:latest
-B. Build and run docker image for core and webclient. Be advised: ** --net host ** is mandatory for core.
+B. Build and run docker images for core and webclient.
+Be advised: ** --net host ** is mandatory for core.
 
-OR.
+OR: lazy and smart way.
 1. docker-compose -f docker-compose.yml up --force-recreate --build
 
 ### API
 
 The REST API is _very_ simple.
-It uses a single route (/api/auth) to handle both new and already authenticated users.
-
-The logon flow is as follows.
-1. Upon visiting a chat room link for the first time, user is prompted to enter a username
-2. Username and room name are sent to the core to check, if the name is available for that room
-3. Upon success, a cookie is set, and a user is taken to the chat.
-4. Upon failure, a user is propmted to enter another username. 
+It uses two routes:
+/api/auth is used to sign up. It accepts a JSON with desired username and room name, and responds with either a token or success:false, if the name is already busy for that room.
+/api/validate accepts a token within JSON and responds with success: true if a token is valid for a room, or success: false otherwise
 
 
 Query to /api/auth is a stringified JSON object, that contains:
 **for new user**
 1. *user*: _String_ -- username
 2. *room*: _String_ -- room name
-
-The [core] checks if a username is not being used at the moment in a room.
-If a room is not present at a time, it is created.
-On success:
-1. Core creates generatess a UUIDv4 token and inserts it with the new entry in the *users* collection 
-2. Response with *success: true, token: _String uuid* is sent to the user.
-3. Token is stored in a cookie alongside with user data. *Cookie is per-chat to maintain chatroom-scope name uniqueness*
-
-On failure:
-1. Reponse JSON with *success: false* is sent to the user.
-2. User is prompted to try another username.
-
-**for a user who already has a token** the flow differs slightly.
-If a cookie for a chatroom is present, its *token* value is sent to the core alongside with *user* and *room* identifiers.
-In this case, the username-token token pair is checked with two different outcomes:
-1. Username taken, token is the same == success (e.g., user can access write under the same name from multiple tabs within a browser)
-2. Username available == success. In this case, a user's token is being stored in the database.
-3. Username taken, token is different == failure
 
 
 ### WebSocket API
@@ -110,8 +89,8 @@ type "leave": {name: username}
 a "join" message is emitted to all users except the joining one.
 
 payload:
-type "join" {name: author username, token: token, signallingSocket: socketId, chatSocket: socketId}.
-_most data is redundant to ensure any issues with chat socket won't affect video conferencing_
+type "join" {name: author username, signallingSocket: socketId, chatSocket: socketId}.
+
 
 2. On "join"
 Receiving a join message on a Signalling socket, all users emit RTCPeerconnection offers towards the newcomer.
@@ -120,7 +99,6 @@ type "offer":
 {
     to: recipient's signalling socket Id
     re: sender's signalling socket Id
-    cid: call id \deprecated\
     name: user's name
     payload: RTC offer
 }
@@ -133,7 +111,6 @@ type "answer":
 {
     to: recipient's signalling socket Id
     re: sender's signalling socket Id
-    cid: call id \deprecated\
     payload: RTC answer
 }
 
@@ -141,9 +118,23 @@ type "answer":
 {
     to: recipient's signalling socket Id
     re: sender's signalling socket Id
-    cid: call id \deprecated\
     payload: RTC signalling payload
 }
 
 5. On "leave", a message with an id of signalling socket to be closed is emitted:
 type "leav"{string signallingSocket.id}
+
+
+** DB structure **
+The system relies on MongoDB for data storage. 
+Data is organized into three collections:
+rooms: {String name, ObjectId users [contains references to users signed up to a room] , ObjectId chat [contains references to related messages])
+Room document is created on first request for it, and is never deleted.
+
+users: {String name, String unique token, String chatSocket, String signallingSocket, ObjectId room [refers to a doc on "rooms" collection], Boolean isActive] 
+User document is created on successful sign-up and updated on log-on, log-out events with actual chatSocket, signallingSocket ids. isActive is updated to true once chatSocket id is present for a user, and to false once it is unset.
+*name* is unique within a chatroom, token is unique systemwide. 
+
+ 
+messages: {String value, String name, ObjectId senderId [refers to a doc on "users" collection], ObjectId room [refers to a doc on "rooms" collection], Date timestamp].
+only chat messages are stored [while neither "user joined"\"left" nor signalling socket messages are]. Timestamp is set automatically via a pre-save middleware. 
