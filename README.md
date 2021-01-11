@@ -36,7 +36,9 @@ Smart way:
 A. Install and start mongoDB
 1. docker pull mongo
 2. docker run --rm -d  -p 27017:27017/tcp mongo:latest
-B. Build and run docker image for core
+B. Build and run docker image for core and webclient. Be advised: ** --net host ** is mandatory for core.
+
+OR.
 1. docker-compose -f docker-compose.yml up --force-recreate --build
 
 ### API
