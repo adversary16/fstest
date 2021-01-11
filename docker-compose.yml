@@ -1,16 +1,13 @@
 version: '3'
 services:
   mongo:
-    image: mongo:4.1.13
+    image: mongo:latest
     restart: always
-    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
-    volumes:
-      - /data/nextHuddle/local:/data/db
     ports:
       - 27017:27017
 
   fstest-core:
-    build: core
+    build: ./core
     restart: always
     depends_on:
       - mongo
